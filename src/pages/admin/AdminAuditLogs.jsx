@@ -1,0 +1,91 @@
+import React, { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { auditAPI } from '../../api'
+import { SectionHeader, LoadingState, EmptyState, Table } from '../../components/ui'
+import { Shield, Search } from 'lucide-react'
+import { format } from 'date-fns'
+import clsx from 'clsx'
+
+const ACTION_COLORS = {
+  ATTENDANCE_MARKED: 'text-jade-400 bg-jade-500/10 border-jade-500/20',
+  ATTENDANCE_UPDATED: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+  SESSION_CREATED: 'text-azure-400 bg-azure-500/10 border-azure-500/20',
+  REPORT_GENERATED: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+  USER_CREATED: 'text-jade-400 bg-jade-500/10 border-jade-500/20',
+  CLASS_CREATED: 'text-azure-400 bg-azure-500/10 border-azure-500/20',
+  PROFILE_UPDATED: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+  NOTE_UPLOADED: 'text-azure-400 bg-azure-500/10 border-azure-500/20',
+  SCHEDULE_CREATED: 'text-jade-400 bg-jade-500/10 border-jade-500/20',
+  EVENT_CREATED: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+}
+
+export default function AdminAuditLogs() {
+  const [search, setSearch] = useState('')
+  const [actionFilter, setActionFilter] = useState('')
+
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ['audit-logs', actionFilter],
+    queryFn: () => auditAPI.getAll(actionFilter ? { action: actionFilter } : {}),
+    refetchInterval: 30000,
+  })
+
+  const filtered = logs?.filter(l =>
+    l.entityType?.toLowerCase().includes(search.toLowerCase()) ||
+    l.action?.toLowerCase().includes(search.toLowerCase()) ||
+    l.performedBy?.toLowerCase().includes(search.toLowerCase())
+  ) || []
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader
+        title="Audit Logs"
+        subtitle="Track all critical system actions in real time"
+      />
+
+      <div className="card p-4 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input className="input pl-9" placeholder="Search actions..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <select className="input max-w-xs" value={actionFilter} onChange={e => setActionFilter(e.target.value)}>
+          <option value="">All Actions</option>
+          {Object.keys(ACTION_COLORS).map(a => <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>)}
+        </select>
+      </div>
+
+      <div className="card overflow-hidden">
+        {isLoading ? <LoadingState /> : (
+          <Table
+            headers={['Action', 'Entity', 'Performed By', 'Details', 'Timestamp']}
+            empty={!filtered.length ? <EmptyState icon={Shield} title="No logs found" /> : null}
+          >
+            {filtered.map(log => (
+              <tr key={log._id} className="table-row">
+                <td className="table-td">
+                  <span className={clsx('text-xs px-2 py-0.5 rounded-full border', ACTION_COLORS[log.action] || 'text-slate-400 bg-ink-700 border-white/10')}>
+                    {log.action?.replace(/_/g, ' ')}
+                  </span>
+                </td>
+                <td className="table-td">
+                  <p className="text-white text-sm">{log.entityType}</p>
+                  <p className="text-slate-500 text-xs font-mono">{log.entityId?.slice(-8)}</p>
+                </td>
+                <td className="table-td">
+                  <p className="text-slate-300 text-xs font-mono">{log.performedBy?.slice(-8)}</p>
+                </td>
+                <td className="table-td">
+                  <p className="text-slate-500 text-xs max-w-xs truncate">
+                    {log.details ? JSON.stringify(log.details).slice(0, 60) + '...' : '—'}
+                  </p>
+                </td>
+                <td className="table-td">
+                  <p className="text-slate-300 text-xs">{format(new Date(log.timestamp), 'MMM d, HH:mm')}</p>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
+      </div>
+    </div>
+  )
+}

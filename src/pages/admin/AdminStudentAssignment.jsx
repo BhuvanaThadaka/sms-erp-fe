@@ -20,13 +20,13 @@ export default function AdminStudentAssignment() {
   })
 
   const { data: classes } = useQuery({
-    queryKey: ['classes'],
-    queryFn: () => classesAPI.getAll({ academicYear: currentYear }),
+    queryKey: ['classes-all'],
+    queryFn: () => classesAPI.getAll(),
   })
 
   const assignMutation = useMutation({
     mutationFn: ({ studentId, classId }) => assignmentAPI.assignStudent(studentId, classId),
-    onSuccess: () => { qc.invalidateQueries(['students-all']); toast.success('Student assigned!') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['students-all'] }); toast.success('Student assigned!') },
   })
 
   const bulkAssignMutation = useMutation({
@@ -34,7 +34,7 @@ export default function AdminStudentAssignment() {
     onSuccess: (res) => {
       const ok = res.filter(r => r.success).length
       toast.success(`${ok} students assigned to class`)
-      qc.invalidateQueries(['students-all'])
+      qc.invalidateQueries({ queryKey: ['students-all'] })
       setSelectedStudents([])
     },
   })

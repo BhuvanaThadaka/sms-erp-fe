@@ -71,7 +71,7 @@ export default function TeacherAttendance() {
     mutationFn: attendanceAPI.bulkMark,
     onSuccess: () => {
       toast.success('Attendance saved successfully!')
-      qc.invalidateQueries(['attendance'])
+      qc.invalidateQueries({ queryKey: ['attendance'] })
     },
   })
 

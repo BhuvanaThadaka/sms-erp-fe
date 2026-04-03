@@ -25,8 +25,8 @@ export default function AdminSubjects() {
   })
 
   const { data: classes } = useQuery({
-    queryKey: ['classes'],
-    queryFn: () => classesAPI.getAll({ academicYear: currentYear }),
+    queryKey: ['classes-all'],
+    queryFn: () => classesAPI.getAll(),
   })
 
   const { data: teachers } = useQuery({
@@ -36,17 +36,17 @@ export default function AdminSubjects() {
 
   const createMutation = useMutation({
     mutationFn: subjectsAPI.create,
-    onSuccess: () => { toast.success('Subject created!'); qc.invalidateQueries(['subjects']); setShowCreate(false); resetForm() },
+    onSuccess: () => { toast.success('Subject created!'); qc.invalidateQueries({ queryKey: ['subjects'] }); setShowCreate(false); resetForm() },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => subjectsAPI.update(id, data),
-    onSuccess: () => { toast.success('Subject updated!'); qc.invalidateQueries(['subjects']); setEditSubject(null) },
+    onSuccess: () => { toast.success('Subject updated!'); qc.invalidateQueries({ queryKey: ['subjects'] }); setEditSubject(null) },
   })
 
   const deleteMutation = useMutation({
     mutationFn: subjectsAPI.delete,
-    onSuccess: () => { toast.success('Subject deactivated'); qc.invalidateQueries(['subjects']) },
+    onSuccess: () => { toast.success('Subject deactivated'); qc.invalidateQueries({ queryKey: ['subjects'] }) },
   })
 
   const resetForm = () => setForm({ name: '', code: '', description: '', classId: '', subjectTeacher: '', academicYear: currentYear, maxMarks: 100, passingMarks: 40 })
@@ -83,11 +83,12 @@ export default function AdminSubjects() {
       <div className="card overflow-hidden">
         {isLoading ? <LoadingState /> : (
           <Table
-            headers={['Subject', 'Code', 'Class', 'Subject Teacher', 'Max Marks', 'Passing', 'Actions']}
+            headers={['S.No', 'Subject', 'Code', 'Class', 'Subject Teacher', 'Max Marks', 'Passing', 'Actions']}
             empty={!filtered.length ? <EmptyState icon={BookOpen} title="No subjects yet" description="Create subjects and assign them to classes" /> : null}
           >
-            {filtered.map(s => (
+            {filtered.map((s, idx) => (
               <tr key={s._id} className="table-row">
+                <td className="table-td text-xs text-slate-400">{idx + 1}</td>
                 <td className="table-td">
                   <p className="text-white font-medium">{s.name}</p>
                   {s.description && <p className="text-xs text-slate-500 truncate max-w-[180px]">{s.description}</p>}

@@ -33,7 +33,7 @@ export default function TeacherSessions() {
 
   const createSession = useMutation({
     mutationFn: sessionsAPI.create,
-    onSuccess: () => { toast.success('Session created!'); qc.invalidateQueries(['sessions']); setShowCreate(false); resetForm() },
+    onSuccess: () => { toast.success('Session created!'); qc.invalidateQueries({ queryKey: ['sessions'] }); setShowCreate(false); resetForm() },
   })
 
   const uploadNote = useMutation({

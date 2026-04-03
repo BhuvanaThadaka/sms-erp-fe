@@ -63,12 +63,12 @@ export default function EventsPage() {
 
   const createMutation = useMutation({
     mutationFn: eventsAPI.create,
-    onSuccess: () => { toast.success('Event created!'); qc.invalidateQueries(['events']); setShowCreate(false) },
+    onSuccess: () => { toast.success('Event created!'); qc.invalidateQueries({ queryKey: ['events'] }); setShowCreate(false) },
   })
 
   const deleteMutation = useMutation({
     mutationFn: eventsAPI.delete,
-    onSuccess: () => { toast.success('Event removed'); qc.invalidateQueries(['events']) },
+    onSuccess: () => { toast.success('Event removed'); qc.invalidateQueries({ queryKey: ['events'] }) },
   })
 
   const EVENT_TYPES = ['EXAM','HOLIDAY','MEETING','ACTIVITY','SPECIAL']

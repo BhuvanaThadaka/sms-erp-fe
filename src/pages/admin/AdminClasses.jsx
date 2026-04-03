@@ -13,16 +13,12 @@ export default function AdminClasses() {
   const [showAssign, setShowAssign] = useState(null)
   const [page, setPage] = useState(1)
   const limit = 10
-  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2024-2025', room: '', maxStudents: 35 })
+  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
   const [assignTeacherId, setAssignTeacherId] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['classes', page],
-    queryFn: () => classesAPI.getAll({ 
-      academicYear: '2024-2025',
-      page,
-      limit
-    }),
+    queryFn: () => classesAPI.getAll({ page, limit }),
     keepPreviousData: true
   })
 
@@ -37,12 +33,12 @@ export default function AdminClasses() {
 
   const createMutation = useMutation({
     mutationFn: classesAPI.create,
-    onSuccess: () => { toast.success('Class created'); qc.invalidateQueries(['classes']); setShowCreate(false) },
+    onSuccess: () => { toast.success('Class created'); qc.invalidateQueries({ queryKey: ['classes'] }); setShowCreate(false) },
   })
 
   const assignMutation = useMutation({
     mutationFn: ({ id, teacherId }) => classesAPI.assignTeacher(id, teacherId),
-    onSuccess: () => { toast.success('Teacher assigned'); qc.invalidateQueries(['classes']); setShowAssign(null) },
+    onSuccess: () => { toast.success('Teacher assigned'); qc.invalidateQueries({ queryKey: ['classes'] }); setShowAssign(null) },
   })
 
   const displayedClasses = (data && !data.classes && rawClasses.length > limit)
@@ -65,11 +61,12 @@ export default function AdminClasses() {
         {isLoading ? <LoadingState /> : (
           <>
             <Table
-              headers={['Class', 'Grade', 'Room', 'Class Teacher', 'Teachers', 'Students Cap', 'Actions']}
+              headers={['S.No', 'Class', 'Grade', 'Room', 'Class Teacher', 'Teachers', 'Students Cap', 'Actions']}
               empty={!displayedClasses.length ? <EmptyState icon={BookOpen} title="No classes yet" /> : null}
             >
-              {displayedClasses.map(cls => (
+              {displayedClasses.map((cls, idx) => (
                 <tr key={cls._id} className="table-row">
+                  <td className="table-td text-xs text-slate-400">{(page - 1) * limit + idx + 1}</td>
                   <td className="table-td">
                     <p className="text-white font-medium">{cls.name}</p>
                     <p className="text-xs text-slate-500 font-mono">{cls.academicYear}</p>

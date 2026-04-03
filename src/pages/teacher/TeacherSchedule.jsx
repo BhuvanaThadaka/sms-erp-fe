@@ -30,7 +30,7 @@ export default function TeacherSchedule() {
 
   const createMutation = useMutation({
     mutationFn: scheduleAPI.create,
-    onSuccess: () => { toast.success('Schedule created!'); qc.invalidateQueries(['schedule-my']); setShowCreate(false) },
+    onSuccess: () => { toast.success('Schedule created!'); qc.invalidateQueries({ queryKey: ['schedule-my'] }); setShowCreate(false) },
   })
 
   const byDay = DAYS.reduce((acc, d) => {

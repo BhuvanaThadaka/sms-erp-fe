@@ -38,7 +38,7 @@ export default function TeacherAcademicReports() {
 
   const generateMutation = useMutation({
     mutationFn: academicReportsAPI.generate,
-    onSuccess: () => { toast.success('Academic report generated!'); qc.invalidateQueries(['academic-reports']); setShowGenerate(false) },
+    onSuccess: () => { toast.success('Academic report generated!'); qc.invalidateQueries({ queryKey: ['academic-reports'] }); setShowGenerate(false) },
   })
 
   const bulkMutation = useMutation({
@@ -46,7 +46,7 @@ export default function TeacherAcademicReports() {
     onSuccess: (data) => {
       const ok = data.filter(r => r.success).length
       toast.success(`Generated ${ok} reports`)
-      qc.invalidateQueries(['academic-reports'])
+      qc.invalidateQueries({ queryKey: ['academic-reports'] })
     },
   })
 

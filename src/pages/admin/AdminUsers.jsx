@@ -47,22 +47,22 @@ export default function AdminUsers() {
 
   const createMutation = useMutation({
     mutationFn: usersAPI.create,
-    onSuccess: () => { toast.success('User created'); qc.invalidateQueries(['users']); setShowCreate(false); resetForm() },
+    onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => usersAPI.update(id, data),
-    onSuccess: () => { toast.success('User updated'); qc.invalidateQueries(['users']); setEditUser(null) },
+    onSuccess: () => { toast.success('User updated'); qc.invalidateQueries({ queryKey: ['users'] }); setEditUser(null) },
   })
 
   const activateMutation = useMutation({
     mutationFn: (id) => usersAPI.update(id, { isActive: true }),
-    onSuccess: () => { toast.success('User activated'); qc.invalidateQueries(['users']) },
+    onSuccess: () => { toast.success('User activated'); qc.invalidateQueries({ queryKey: ['users'] }) },
   })
 
   const deactivateMutation = useMutation({
     mutationFn: usersAPI.deactivate,
-    onSuccess: () => { toast.success('User deactivated'); qc.invalidateQueries(['users']) },
+    onSuccess: () => { toast.success('User deactivated'); qc.invalidateQueries({ queryKey: ['users'] }) },
   })
 
   const resetForm = () => {

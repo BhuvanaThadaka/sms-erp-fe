@@ -1,6 +1,6 @@
 import React from 'react'
 import clsx from 'clsx'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ─── Spinner ───────────────────────────────────────────
 export function Spinner({ className }) {
@@ -161,6 +161,61 @@ export function AttendanceRing({ percentage, size = 80 }) {
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="font-display font-bold text-sm text-white">{pct}%</span>
+      </div>
+    </div>
+  )
+}
+// ─── Pagination ────────────────────────────────────────
+export function Pagination({ page, totalPages, total, limit, onPageChange }) {
+  if (totalPages <= 1) return null
+  
+  return (
+    <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
+      <p className="text-xs text-slate-400">
+        Showing <span className="text-slate-200">{(page - 1) * limit + 1}</span> to <span className="text-slate-200">{Math.min(page * limit, total)}</span> of <span className="text-slate-200">{total}</span> records
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          disabled={page === 1}
+          onClick={() => onPageChange(page - 1)}
+          className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div className="flex items-center gap-1 mx-2">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum = page
+            if (totalPages > 5) {
+              if (page <= 3) pageNum = i + 1
+              else if (page >= totalPages - 2) pageNum = totalPages - 4 + i
+              else pageNum = page - 2 + i
+            } else {
+              pageNum = i + 1
+            }
+            
+            return (
+              <button
+                key={pageNum}
+                onClick={() => onPageChange(pageNum)}
+                className={clsx(
+                  "w-8 h-8 rounded-lg text-xs font-bold transition-all",
+                  page === pageNum 
+                    ? "bg-azure-600 text-white" 
+                    : "text-slate-500 hover:text-white hover:bg-white/5"
+                )}
+              >
+                {pageNum}
+              </button>
+            )
+          })}
+        </div>
+        <button
+          disabled={page === totalPages}
+          onClick={() => onPageChange(page + 1)}
+          className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   )

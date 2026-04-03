@@ -13,7 +13,10 @@ export function AuthProvider({ children }) {
     setLoading(true)
     try {
       const res = await authAPI.login(credentials)
-      const { token, user: userData } = res
+      const token = res.token || res.data?.token
+      const userData = res.user || res.data?.user || res.data || res
+      if (!token || !userData) throw new Error('Invalid response from server')
+      
       localStorage.setItem('erp_token', token)
       localStorage.setItem('erp_user', JSON.stringify(userData))
       setUser(userData)

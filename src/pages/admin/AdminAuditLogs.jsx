@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { auditAPI } from '../../api'
-import { SectionHeader, LoadingState, EmptyState, Table } from '../../components/ui'
-import { Shield, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { SectionHeader, LoadingState, EmptyState, Table, Pagination } from '../../components/ui'
+import { Shield, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 
@@ -26,7 +26,7 @@ export default function AdminAuditLogs() {
   const limit = 20
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit-logs', actionFilter, page],
+    queryKey: ['audit-logs', actionFilter, page, search],
     queryFn: () => auditAPI.getAll({ 
       action: actionFilter,
       page,
@@ -37,9 +37,15 @@ export default function AdminAuditLogs() {
     keepPreviousData: true
   })
 
-  const logs = data?.logs || data || []
-  const total = data?.total || logs.length
+  const rawLogs = data?.logs || (Array.isArray(data) ? data : [])
+  const total = data?.total || rawLogs.length
   const totalPages = data?.totalPages || Math.ceil(total / limit) || 1
+  
+  // Client-side fallback: if the server returns all records (data.logs is missing and length > limit),
+  // we slice it locally to ensure the user only sees what belongs on the current page.
+  const logs = (data && !data.logs && rawLogs.length > limit)
+    ? rawLogs.slice((page - 1) * limit, page * limit)
+    : rawLogs
 
   return (
     <div className="space-y-5">
@@ -101,57 +107,13 @@ export default function AdminAuditLogs() {
               ))}
             </Table>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
-                <p className="text-xs text-slate-500">
-                  Showing <span className="text-slate-300">{(page - 1) * limit + 1}</span> to <span className="text-slate-300">{Math.min(page * limit, total)}</span> of <span className="text-slate-300">{total}</span> logs
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage(p => p - 1)}
-                    className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <div className="flex items-center gap-1 mx-2">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum = page
-                      if (totalPages > 5) {
-                        if (page <= 3) pageNum = i + 1
-                        else if (page >= totalPages - 2) pageNum = totalPages - 4 + i
-                        else pageNum = page - 2 + i
-                      } else {
-                        pageNum = i + 1
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setPage(pageNum)}
-                          className={clsx(
-                            "w-8 h-8 rounded-lg text-xs font-bold transition-all",
-                            page === pageNum 
-                              ? "bg-azure-600 text-white" 
-                              : "text-slate-500 hover:text-white hover:bg-white/5"
-                          )}
-                        >
-                          {pageNum}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                    className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination 
+              page={page} 
+              totalPages={totalPages} 
+              total={total} 
+              limit={limit} 
+              onPageChange={setPage} 
+            />
           </>
         )}
       </div>

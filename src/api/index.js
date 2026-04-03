@@ -17,13 +17,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res.data?.data ?? res.data,
   (err) => {
-    const msg = err.response?.data?.message || 'Something went wrong'
+    const msg = err.response?.data?.message || err.response?.data?.error || 'Something went wrong'
     if (err.response?.status === 401) {
       localStorage.removeItem('erp_token')
       localStorage.removeItem('erp_user')
       window.location.href = '/login'
     } else if (err.response?.status !== 403) {
-      toast.error(Array.isArray(msg) ? msg[0] : msg)
+      const displayMsg = Array.isArray(msg) ? msg[0] : (typeof msg === 'object' ? JSON.stringify(msg) : msg)
+      toast.error(displayMsg)
     }
     return Promise.reject(err)
   }

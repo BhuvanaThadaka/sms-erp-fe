@@ -149,4 +149,12 @@ export const assignmentAPI = {
   bulkAssign: (studentIds, classId) => api.post('/users/bulk-assign-class', { studentIds, classId }),
 }
 
+// ─── Notifications ─────────────────────────────────────
+export const notificationsAPI = {
+  getAll: () => api.get('/notifications'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.post('/notifications/read-all'),
+  delete: (id) => api.delete(`/notifications/${id}`),
+}
+
 export default api

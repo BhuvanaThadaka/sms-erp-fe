@@ -9,6 +9,7 @@ import {
   Clock, BarChart3, BookCopy, UserCheck, PenLine
 } from 'lucide-react'
 import clsx from 'clsx'
+import NotificationDropdown from './NotificationDropdown'
 
 const NAV = {
   ADMIN: [
@@ -55,10 +56,13 @@ const ROLE_BG = {
 
 export default function Layout() {
   const { user, logout } = useAuth()
-  const { connected } = useSocket()
+  const { connected, notifications, markAsRead, markAllAsRead } = useSocket()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+
+  const unreadCount = notifications.filter(n => !n.isRead).length
 
   const nav = NAV[user?.role] || []
 
@@ -170,7 +174,7 @@ export default function Layout() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center gap-3 px-4 lg:px-6 h-14 border-b border-white/5 bg-ink-900/50 backdrop-blur flex-shrink-0">
+        <header className="flex items-center gap-3 px-4 lg:px-6 h-14 border-b border-white/5 bg-ink-900/50 backdrop-blur flex-shrink-0 z-40 relative">
           <button
             onClick={() => { setSidebarOpen(v => !v); setMobileOpen(v => !v) }}
             className="text-slate-400 hover:text-white transition-colors"
@@ -181,10 +185,28 @@ export default function Layout() {
           <div className={clsx('hidden sm:flex items-center gap-2 text-xs px-2.5 py-1 rounded-full border', ROLE_BG[user?.role])}>
             <span className={ROLE_COLORS[user?.role]}>{user?.role}</span>
           </div>
-          <button className="relative text-slate-400 hover:text-white transition-colors p-1.5">
-            <Bell className="w-4 h-4" />
-            {connected && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-azure-400" />}
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative text-slate-400 hover:text-white transition-colors p-1.5"
+            >
+              <Bell className={clsx('w-4 h-4', unreadCount > 0 && 'animate-pulse text-azure-400')} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-ink-900 shadow-lg">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <NotificationDropdown 
+                notifications={notifications}
+                onClose={() => setShowNotifications(false)}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+              />
+            )}
+          </div>
         </header>
 
         {/* Content */}

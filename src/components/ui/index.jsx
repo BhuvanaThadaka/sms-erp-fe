@@ -1,6 +1,6 @@
 import React from 'react'
 import clsx from 'clsx'
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 
 // ─── Spinner ───────────────────────────────────────────
 export function Spinner({ className }) {
@@ -128,12 +128,17 @@ export function SectionHeader({ title, subtitle, action }) {
 }
 
 // ─── Form Field ────────────────────────────────────────
-export function Field({ label, error, children }) {
+export function Field({ label, error, required, children }) {
   return (
     <div>
-      {label && <label className="label">{label}</label>}
+      {label && <label className="label">{label}{required && <span className="text-rose-500 ml-1">*</span>}</label>}
       {children}
-      {error && <p className="text-xs text-rose-400 mt-1">{error}</p>}
+      {error && (
+        <div className="flex items-center gap-1.5 mt-1.5 text-rose-400">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+          <p className="text-xs font-medium">{error}</p>
+        </div>
+      )}
     </div>
   )
 }

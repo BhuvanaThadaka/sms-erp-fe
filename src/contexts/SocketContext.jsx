@@ -45,17 +45,27 @@ export function SocketProvider({ children }) {
 
     socket.on('systemNotification', (notification) => {
       console.log('Received systemNotification:', notification);
-      // Add to state if it's a new notification object from backend or map it
-      const newNotif = notification.data ? {
-        _id: notification.data.eventId || Date.now().toString(),
-        title: notification.data.title,
+      
+      // Resolve ID and Title from data if missing at top level
+      const data = notification.data || {};
+      const _id = notification._id || data.eventId || data.sessionId || data.scheduleId || Date.now().toString();
+      const title = notification.title || data.title || 'New Notification';
+
+      const newNotif = {
+        _id,
+        title,
         message: notification.message,
         type: notification.type,
-        createdAt: new Date().toISOString(),
-        isRead: false
-      } : notification;
+        createdAt: notification.createdAt || new Date().toISOString(),
+        isRead: false,
+        data
+      };
 
-      setNotifications(prev => [newNotif, ...prev].slice(0, 50))
+      setNotifications(prev => {
+        // Prevent duplicates if ID exists
+        if (prev.some(n => n._id === _id)) return prev;
+        return [newNotif, ...prev].slice(0, 50);
+      })
     })
 
     socket.on('attendanceUpdate', (data) => {

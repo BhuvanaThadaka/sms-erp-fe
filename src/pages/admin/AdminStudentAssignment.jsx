@@ -52,10 +52,37 @@ export default function AdminStudentAssignment() {
     },
   })
 
-  const filtered = students?.filter(s =>
-    `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase().includes(search.toLowerCase()) &&
-    (!classFilter || (s.classId?._id === classFilter || s.classId === classFilter))
-  ) || []
+  const normalizeID = (id) => {
+    if (!id) return null
+    if (typeof id === 'string') return id
+    if (id._id) return normalizeID(id._id)
+    if (id.$oid) return id.$oid
+    return String(id)
+  }
+
+  const studentList = students?.users || (Array.isArray(students) ? students : [])
+  const classList = classes?.classes || (Array.isArray(classes) ? classes : [])
+
+  const filtered = studentList.filter(s => {
+    const searchStr = `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase()
+    const matchesSearch = searchStr.includes(search.toLowerCase())
+    
+    const studentClassId = normalizeID(s.classId)
+    const filterId = normalizeID(classFilter)
+    const selectedClass = classList.find(c => normalizeID(c._id) === filterId)
+
+    let matchesClass = true
+    if (classFilter === 'unassigned') {
+      matchesClass = !studentClassId
+    } else if (classFilter) {
+      // Robust match: check ID first, then fallback to name comparison
+      const idMatch = studentClassId === filterId
+      const nameMatch = selectedClass && s.classId?.name === selectedClass.name
+      matchesClass = idMatch || nameMatch
+    }
+
+    return matchesSearch && matchesClass
+  })
 
   const toggleStudent = (id) => {
     setSelectedStudents(prev =>

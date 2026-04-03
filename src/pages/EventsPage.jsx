@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsAPI, classesAPI } from '../api'
 import { useAuth } from '../contexts/AuthContext'
-import { SectionHeader, LoadingState, EmptyState, Modal, Field, Badge } from '../components/ui'
+import { SectionHeader, LoadingState, EmptyState, Modal, Field, Badge, Pagination } from '../components/ui'
 import { Calendar, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -20,6 +20,8 @@ export default function EventsPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [showCreate, setShowCreate] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
+  const [page, setPage] = useState(1)
+  const limit = 10
   const [form, setForm] = useState({
     title: '', description: '', type: 'EXAM',
     startDate: format(new Date(), 'yyyy-MM-dd'),
@@ -30,10 +32,28 @@ export default function EventsPage() {
   const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
   const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
 
-  const { data: events, isLoading } = useQuery({
-    queryKey: ['events', startDate, endDate, typeFilter],
-    queryFn: () => eventsAPI.getAll({ startDate, endDate, academicYear: '2024-2025' }),
+  const { data, isLoading } = useQuery({
+    queryKey: ['events', startDate, endDate, typeFilter, page],
+    queryFn: () => eventsAPI.getAll({ 
+      startDate, 
+      endDate, 
+      type: typeFilter || undefined,
+      academicYear: '2024-2025',
+      page,
+      limit
+    }),
+    keepPreviousData: true
   })
+
+  const rawEvents = data?.events || (Array.isArray(data) ? data : [])
+  const total = data?.total || rawEvents.length
+  const totalPages = data?.totalPages || Math.ceil(total / limit) || 1
+
+  const filtered = (typeFilter ? rawEvents?.filter(e => e.type === typeFilter) : rawEvents) || []
+  
+  const displayedEvents = (data && !data.events && filtered.length > limit)
+    ? filtered.slice((page - 1) * limit, page * limit)
+    : filtered
 
   const { data: classes } = useQuery({
     queryKey: ['classes'],
@@ -50,8 +70,6 @@ export default function EventsPage() {
     mutationFn: eventsAPI.delete,
     onSuccess: () => { toast.success('Event removed'); qc.invalidateQueries(['events']) },
   })
-
-  const filtered = typeFilter ? events?.filter(e => e.type === typeFilter) : events
 
   const EVENT_TYPES = ['EXAM','HOLIDAY','MEETING','ACTIVITY','SPECIAL']
   const TYPE_COLORS = {
@@ -74,13 +92,13 @@ export default function EventsPage() {
 
       {/* Month navigation */}
       <div className="card p-4 flex items-center justify-between">
-        <button onClick={() => setCurrentMonth(m => subMonths(m, 1))} className="btn-secondary p-2">
+        <button onClick={() => { setCurrentMonth(m => subMonths(m, 1)); setPage(1) }} className="btn-secondary p-2">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <h2 className="font-display font-bold text-white text-lg">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
-        <button onClick={() => setCurrentMonth(m => addMonths(m, 1))} className="btn-secondary p-2">
+        <button onClick={() => { setCurrentMonth(m => addMonths(m, 1)); setPage(1) }} className="btn-secondary p-2">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -90,7 +108,7 @@ export default function EventsPage() {
         {['', ...EVENT_TYPES].map(t => (
           <button
             key={t}
-            onClick={() => setTypeFilter(t)}
+            onClick={() => { setTypeFilter(t); setPage(1) }}
             className={clsx(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
               typeFilter === t
@@ -103,49 +121,59 @@ export default function EventsPage() {
         ))}
       </div>
 
-      {isLoading ? <LoadingState /> : !filtered?.length ? (
+      {isLoading ? <LoadingState /> : !displayedEvents?.length ? (
         <EmptyState icon={Calendar} title="No events this month" description="No events scheduled for this period" />
       ) : (
-        <div className="space-y-3">
-          {filtered.map(event => {
-            const color = TYPE_COLORS[event.type] || 'azure'
-            return (
-              <div key={event._id} className={`card card-hover p-5 border-l-2 border-l-${color}-500/50`}>
-                <div className="flex items-start gap-4">
-                  <div className="text-2xl flex-shrink-0">{EVENT_ICONS[event.type]}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-white font-semibold font-display">{event.title}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge status={event.type} />
-                          {event.isAllClasses && (
-                            <span className="text-xs text-slate-500 bg-ink-700 px-1.5 py-0.5 rounded">All Classes</span>
-                          )}
+        <div className="space-y-4">
+          <div className="space-y-3">
+            {displayedEvents.map(event => {
+              const color = TYPE_COLORS[event.type] || 'azure'
+              return (
+                <div key={event._id} className={`card card-hover p-5 border-l-2 border-l-${color}-500/50`}>
+                  <div className="flex items-start gap-4">
+                    <div className="text-2xl flex-shrink-0">{EVENT_ICONS[event.type]}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-white font-semibold font-display">{event.title}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge status={event.type} />
+                            {event.isAllClasses && (
+                              <span className="text-xs text-slate-500 bg-ink-700 px-1.5 py-0.5 rounded">All Classes</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-medium text-white font-mono">
+                            {format(new Date(event.startDate), 'MMM d')}
+                            {event.startDate !== event.endDate && ` – ${format(new Date(event.endDate), 'MMM d')}`}
+                          </p>
+                          {event.venue && <p className="text-xs text-slate-500 mt-0.5">{event.venue}</p>}
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-medium text-white font-mono">
-                          {format(new Date(event.startDate), 'MMM d')}
-                          {event.startDate !== event.endDate && ` – ${format(new Date(event.endDate), 'MMM d')}`}
-                        </p>
-                        {event.venue && <p className="text-xs text-slate-500 mt-0.5">{event.venue}</p>}
-                      </div>
+                      {event.description && (
+                        <p className="text-sm text-slate-400 mt-2 line-clamp-2">{event.description}</p>
+                      )}
                     </div>
-                    {event.description && (
-                      <p className="text-sm text-slate-400 mt-2 line-clamp-2">{event.description}</p>
+                    {isAdmin && (
+                      <button
+                        onClick={() => { if (confirm('Remove this event?')) deleteMutation.mutate(event._id) }}
+                        className="text-slate-600 hover:text-rose-400 transition-colors text-lg leading-none flex-shrink-0"
+                      >×</button>
                     )}
                   </div>
-                  {isAdmin && (
-                    <button
-                      onClick={() => { if (confirm('Remove this event?')) deleteMutation.mutate(event._id) }}
-                      className="text-slate-600 hover:text-rose-400 transition-colors text-lg leading-none flex-shrink-0"
-                    >×</button>
-                  )}
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+
+          <Pagination 
+            page={page} 
+            totalPages={totalPages} 
+            total={total} 
+            limit={limit} 
+            onPageChange={setPage} 
+          />
         </div>
       )}
 

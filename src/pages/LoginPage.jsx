@@ -16,12 +16,19 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const { user } = await login(form)
-      toast.success(`Welcome back, ${user.firstName}!`)
-      if (user.role === 'ADMIN') navigate('/admin')
-      else if (user.role === 'TEACHER') navigate('/teacher')
-      else navigate('/student')
-    } catch {
-      // errors toasted by interceptor
+      if (!user) throw new Error('User data missing')
+      
+      toast.success(`Welcome back, ${user.firstName || 'User'}!`)
+      const role = user.role?.toUpperCase()
+      if (role === 'ADMIN') navigate('/admin')
+      else if (role === 'TEACHER') navigate('/teacher')
+      else if (role === 'STUDENT') navigate('/student')
+      else {
+        toast.error('Unknown role, please contact admin')
+        navigate('/login')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
     } finally {
       setLoading(false)
     }

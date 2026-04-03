@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersAPI } from '../../api'
-import { SectionHeader, Badge, LoadingState, EmptyState, Modal, Field, Table } from '../../components/ui'
+import { SectionHeader, Badge, LoadingState, EmptyState, Modal, Field, Table, Pagination } from '../../components/ui'
 import { Users, Plus, Search, UserCheck, UserX, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -12,14 +12,37 @@ export default function AdminUsers() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
+  const [page, setPage] = useState(1)
+  const limit = 10
   const [showCreate, setShowCreate] = useState(false)
   const [editUser, setEditUser] = useState(null)
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '', enrollmentNumber: '', employeeId: '' })
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users', roleFilter],
-    queryFn: () => usersAPI.getAll(roleFilter ? { role: roleFilter } : {}),
+  const { data, isLoading } = useQuery({
+    queryKey: ['users', roleFilter, page, search],
+    queryFn: () => usersAPI.getAll({ 
+      role: roleFilter || undefined,
+      page,
+      limit,
+      search: search || undefined
+    }),
+    keepPreviousData: true
   })
+
+  const rawUsers = data?.users || (Array.isArray(data) ? data : [])
+  const total = data?.total || rawUsers.length
+  const totalPages = data?.totalPages || Math.ceil(total / limit) || 1
+
+  // Client-side fallback: if the server returns all records, frontend will slice
+  // We also keep the client-side search/filter for robustness if the API search isn't perfect
+  const filtered = rawUsers.filter(u =>
+    `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase()) &&
+    (!roleFilter || u.role === roleFilter)
+  )
+
+  const displayedUsers = (data && !data.users && filtered.length > limit)
+    ? filtered.slice((page - 1) * limit, page * limit)
+    : filtered
 
   const createMutation = useMutation({
     mutationFn: usersAPI.create,
@@ -31,6 +54,11 @@ export default function AdminUsers() {
     onSuccess: () => { toast.success('User updated'); qc.invalidateQueries(['users']); setEditUser(null) },
   })
 
+  const activateMutation = useMutation({
+    mutationFn: (id) => usersAPI.update(id, { isActive: true }),
+    onSuccess: () => { toast.success('User activated'); qc.invalidateQueries(['users']) },
+  })
+
   const deactivateMutation = useMutation({
     mutationFn: usersAPI.deactivate,
     onSuccess: () => { toast.success('User deactivated'); qc.invalidateQueries(['users']) },
@@ -38,20 +66,27 @@ export default function AdminUsers() {
 
   const resetForm = () => setForm({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '', enrollmentNumber: '', employeeId: '' })
 
-  const filtered = users?.filter(u =>
-    `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
-  ) || []
-
   const handleCreate = (e) => {
     e.preventDefault()
-    createMutation.mutate(form)
+    const payload = { ...form }
+    // Remove fields strictly forbidden by backend DTO
+    delete payload.isActive
+    
+    if (form.role === 'TEACHER') {
+      delete payload.enrollmentNumber
+      if (!payload.employeeId) return toast.error('Employee ID is required for teachers')
+    } else if (form.role === 'STUDENT') {
+      delete payload.employeeId
+      if (!payload.enrollmentNumber) return toast.error('Enrollment Number is required for students')
+    }
+    createMutation.mutate(payload)
   }
 
   return (
     <div className="space-y-5">
       <SectionHeader
         title="User Management"
-        subtitle={`${users?.length || 0} total users in the system`}
+        subtitle={`${total || 0} total users in the system`}
         action={
           <button onClick={() => setShowCreate(true)} className="btn-primary">
             <Plus className="w-4 h-4" /> Add User
@@ -67,14 +102,14 @@ export default function AdminUsers() {
             className="input pl-9"
             placeholder="Search by name or email..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
           />
         </div>
         <div className="flex gap-2">
           {['', ...ROLES].map(r => (
             <button
               key={r}
-              onClick={() => setRoleFilter(r)}
+              onClick={() => { setRoleFilter(r); setPage(1) }}
               className={clsx(
                 'px-3 py-2 rounded-lg text-xs font-medium border transition-all',
                 roleFilter === r
@@ -91,61 +126,78 @@ export default function AdminUsers() {
       {/* Table */}
       <div className="card overflow-hidden">
         {isLoading ? <LoadingState /> : (
-          <Table
-            headers={['User', 'Role', 'Contact', 'ID', 'Status', 'Actions']}
-            empty={filtered.length === 0 ? (
-              <EmptyState icon={Users} title="No users found" description="Try adjusting your filters" />
-            ) : null}
-          >
-            {filtered.map(u => (
-              <tr key={u._id} className="table-row">
-                <td className="table-td">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-ink-700 border border-white/5 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-slate-300">{u.firstName[0]}{u.lastName[0]}</span>
+          <>
+            <Table
+              headers={['User', 'Role', 'Contact', 'ID', 'Status', 'Actions']}
+              empty={displayedUsers.length === 0 ? (
+                <EmptyState icon={Users} title="No users found" description="Try adjusting your filters" />
+              ) : null}
+            >
+              {displayedUsers.map(u => (
+                <tr key={u._id} className="table-row">
+                  <td className="table-td">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-ink-700 border border-white/5 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-slate-300">{u.firstName[0]}{u.lastName[0]}</span>
+                      </div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{u.firstName} {u.lastName}</p>
+                        <p className="text-slate-500 text-xs">{u.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white font-medium text-sm">{u.firstName} {u.lastName}</p>
-                      <p className="text-slate-500 text-xs">{u.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="table-td"><Badge status={u.role} /></td>
-                <td className="table-td text-slate-400">{u.phone || '—'}</td>
-                <td className="table-td">
-                  <span className="font-mono text-xs text-slate-500">
-                    {u.enrollmentNumber || u.employeeId || '—'}
-                  </span>
-                </td>
-                <td className="table-td">
-                  <span className={clsx('text-xs px-2 py-0.5 rounded-full border', u.isActive
-                    ? 'bg-jade-500/10 text-jade-400 border-jade-500/20'
-                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                  )}>
-                    {u.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setEditUser(u)}
-                      className="p-1.5 text-slate-400 hover:text-azure-400 hover:bg-azure-500/10 rounded-lg transition-all"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    {u.isActive && (
+                  </td>
+                  <td className="table-td"><Badge status={u.role} /></td>
+                  <td className="table-td text-slate-400">{u.phone || '—'}</td>
+                  <td className="table-td">
+                    <span className="font-mono text-xs text-slate-500">
+                      {u.enrollmentNumber || u.employeeId || '—'}
+                    </span>
+                  </td>
+                  <td className="table-td">
+                    <span className={clsx('text-xs px-2 py-0.5 rounded-full border', u.isActive
+                      ? 'bg-jade-500/10 text-jade-400 border-jade-500/20'
+                      : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    )}>
+                      {u.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="table-td">
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => { if (confirm(`Deactivate ${u.firstName}?`)) deactivateMutation.mutate(u._id) }}
-                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                        onClick={() => setEditUser(u)}
+                        className="p-1.5 text-slate-400 hover:text-azure-400 hover:bg-azure-500/10 rounded-lg transition-all"
                       >
-                        <UserX className="w-3.5 h-3.5" />
+                        <Pencil className="w-3.5 h-3.5" />
                       </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </Table>
+                      {u.isActive ? (
+                        <button
+                          onClick={() => { if (confirm(`Deactivate ${u.firstName}?`)) deactivateMutation.mutate(u._id) }}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { if (confirm(`Activate ${u.firstName}?`)) activateMutation.mutate(u._id) }}
+                          className="p-1.5 text-slate-400 hover:text-jade-400 hover:bg-jade-500/10 rounded-lg transition-all"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+
+            <Pagination 
+              page={page} 
+              totalPages={totalPages} 
+              total={total} 
+              limit={limit} 
+              onPageChange={setPage} 
+            />
+          </>
         )}
       </div>
 

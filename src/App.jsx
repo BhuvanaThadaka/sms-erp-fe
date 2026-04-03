@@ -31,16 +31,18 @@ import Layout from './components/layout/Layout'
 function PrivateRoute({ children, roles }) {
   const { user, isAuthenticated } = useAuth()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (roles && !roles.includes(user?.role)) return <Navigate to="/" replace />
+  if (roles && !roles.map(r => r.toUpperCase()).includes(user?.role?.toUpperCase())) return <Navigate to="/" replace />
   return children
 }
 
 function RoleRedirect() {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  if (user.role === 'ADMIN') return <Navigate to="/admin" replace />
-  if (user.role === 'TEACHER') return <Navigate to="/teacher" replace />
-  return <Navigate to="/student" replace />
+  const role = user.role?.toUpperCase()
+  if (role === 'ADMIN') return <Navigate to="/admin" replace />
+  if (role === 'TEACHER') return <Navigate to="/teacher" replace />
+  if (role === 'STUDENT') return <Navigate to="/student" replace />
+  return <Navigate to="/login" replace />
 }
 
 function AppRoutes() {

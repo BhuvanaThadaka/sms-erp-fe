@@ -5,6 +5,9 @@ import { SocketProvider } from './contexts/SocketContext'
 
 // Pages
 import LoginPage from './pages/LoginPage'
+import RegistrationPage from './pages/RegistrationPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminClasses from './pages/admin/AdminClasses'
@@ -50,6 +53,9 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <RoleRedirect /> : <LoginPage />} />
+      <Route path="/register" element={isAuthenticated ? <RoleRedirect /> : <RegistrationPage />} />
+      <Route path="/forgot-password" element={isAuthenticated ? <RoleRedirect /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password" element={isAuthenticated ? <RoleRedirect /> : <ResetPasswordPage />} />
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<RoleRedirect />} />
 

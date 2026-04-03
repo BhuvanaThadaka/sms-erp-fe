@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { GraduationCap, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -98,15 +98,22 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full justify-center py-2.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Signing in...' : (
-                <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>
-              )}
-            </button>
+            <div className="flex flex-col gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full justify-center py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Signing in...' : (
+                  <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>
+                )}
+              </button>
+              <div className="flex justify-center">
+                <Link to="/forgot-password" className="text-azure-400 hover:text-azure-300 transition-colors text-sm font-medium">
+                  Forgot your password?
+                </Link>
+              </div>
+            </div>
           </form>
 
           {/* Demo logins */}
@@ -132,6 +139,13 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
+
+        <p className="text-center text-sm text-slate-500 mt-6">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-azure-400 hover:text-azure-300 font-medium hover:underline underline-offset-4 decoration-azure-400/30 transition-all">
+            Create one now
+          </Link>
+        </p>
 
         <p className="text-center text-xs text-slate-600 mt-6">
           School ERP v1.0 — Academic Year 2024–25

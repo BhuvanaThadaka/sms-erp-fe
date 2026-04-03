@@ -39,10 +39,37 @@ export default function AdminStudentAssignment() {
     },
   })
 
-  const filtered = students?.filter(s =>
-    `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase().includes(search.toLowerCase()) &&
-    (!classFilter || (s.classId?._id === classFilter || s.classId === classFilter))
-  ) || []
+  const normalizeID = (id) => {
+    if (!id) return null
+    if (typeof id === 'string') return id
+    if (id._id) return normalizeID(id._id)
+    if (id.$oid) return id.$oid
+    return String(id)
+  }
+
+  const studentList = students?.users || (Array.isArray(students) ? students : [])
+  const classList = classes?.classes || (Array.isArray(classes) ? classes : [])
+
+  const filtered = studentList.filter(s => {
+    const searchStr = `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase()
+    const matchesSearch = searchStr.includes(search.toLowerCase())
+    
+    const studentClassId = normalizeID(s.classId)
+    const filterId = normalizeID(classFilter)
+    const selectedClass = classList.find(c => normalizeID(c._id) === filterId)
+
+    let matchesClass = true
+    if (classFilter === 'unassigned') {
+      matchesClass = !studentClassId
+    } else if (classFilter) {
+      // Robust match: check ID first, then fallback to name comparison
+      const idMatch = studentClassId === filterId
+      const nameMatch = selectedClass && s.classId?.name === selectedClass.name
+      matchesClass = idMatch || nameMatch
+    }
+
+    return matchesSearch && matchesClass
+  })
 
   const toggleStudent = (id) => {
     setSelectedStudents(prev =>
@@ -65,7 +92,7 @@ export default function AdminStudentAssignment() {
             <div className="flex items-center gap-3">
               <select className="input max-w-[180px]" value={targetClass} onChange={e => setTargetClass(e.target.value)}>
                 <option value="">Select class...</option>
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {classList?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
               <button
                 onClick={() => { if (!targetClass) return toast.error('Select a class'); bulkAssignMutation.mutate({ studentIds: selectedStudents, classId: targetClass }) }}
@@ -89,7 +116,7 @@ export default function AdminStudentAssignment() {
         <select className="input max-w-[200px]" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
           <option value="">All students</option>
           <option value="unassigned">Unassigned</option>
-          {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          {classList?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>
 
@@ -144,7 +171,7 @@ export default function AdminStudentAssignment() {
                     id={`class-${student._id}`}
                   >
                     <option value="">Choose...</option>
-                    {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                    {classList?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
                 </td>
                 <td className="table-td">

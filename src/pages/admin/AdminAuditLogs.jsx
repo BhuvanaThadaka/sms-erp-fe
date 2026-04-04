@@ -78,7 +78,7 @@ export default function AdminAuditLogs() {
         {isLoading ? <LoadingState /> : (
           <>
             <Table
-              headers={['S.No', 'Action', 'Entity', 'Performed By', 'Details', 'Timestamp']}
+              headers={['S.No', 'Action', 'Entity', 'Performed By', 'Timestamp']}
               empty={!logs.length ? <EmptyState icon={Shield} title="No logs found" /> : null}
             >
               {logs.map((log, idx) => (
@@ -94,12 +94,15 @@ export default function AdminAuditLogs() {
                     <p className="text-slate-500 text-xs font-mono">{log.entityId?.slice(-8)}</p>
                   </td>
                   <td className="table-td">
-                    <p className="text-slate-300 text-xs font-mono">{log.performedBy?.slice(-8)}</p>
-                  </td>
-                  <td className="table-td">
-                    <p className="text-slate-500 text-xs max-w-xs truncate">
-                      {log.details ? JSON.stringify(log.details).slice(0, 60) + '...' : '—'}
-                    </p>
+                    <span className={clsx(
+                      "text-[10px] font-bold px-2 py-0.5 rounded-md border",
+                      log.performedBy?.role === 'ADMIN' ? "text-rose-400 bg-rose-500/10 border-rose-500/20" :
+                      log.performedBy?.role === 'TEACHER' ? "text-azure-400 bg-azure-500/10 border-azure-500/20" :
+                      "text-jade-400 bg-jade-500/10 border-jade-500/20"
+                    )}>
+                      {log.performedBy?.role || 'SYSTEM'}
+                    </span>
+                    <p className="text-slate-500 text-[10px] mt-1">{log.performedBy?.firstName} {log.performedBy?.lastName}</p>
                   </td>
                   <td className="table-td">
                     <p className="text-slate-300 text-xs">{format(new Date(log.timestamp), 'MMM d, HH:mm')}</p>

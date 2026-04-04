@@ -288,7 +288,7 @@ export function InfiniteSelect({
       </div>
 
       {isOpen && (
-        <div ref={scrollContainerRef} className="absolute z-[100] mt-2 w-full max-h-60 overflow-y-auto bg-dark-card border border-white/10 rounded-xl shadow-2xl p-1 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div ref={scrollContainerRef} className="absolute z-[100] mt-2 w-full max-h-60 overflow-y-auto bg-ink-800 border border-white/10 rounded-xl shadow-2xl p-1 animate-in fade-in slide-in-from-top-1 duration-200">
           <div 
             className="p-2 text-xs font-medium text-azure-400 hover:bg-white/5 cursor-pointer rounded-lg border-b border-white/5 mb-1"
             onClick={() => { onChange(''); setIsOpen(false) }}

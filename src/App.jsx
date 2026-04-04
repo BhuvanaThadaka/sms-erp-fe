@@ -32,6 +32,7 @@ import StudentReportCard from './pages/student/StudentReportCard'
 import Profile from './pages/shared/Profile'
 import EventsPage from './pages/EventsPage'
 import ProfilePage from './pages/ProfilePage'
+import ProfilePage from './pages/ProfilePage'
 import Layout from './components/layout/Layout'
 
 function PrivateRoute({ children, roles }) {
@@ -91,7 +92,7 @@ function AppRoutes() {
 
         {/* Shared */}
         <Route path="events" element={<PrivateRoute><EventsPage /></PrivateRoute>} />
-        <Route path="profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

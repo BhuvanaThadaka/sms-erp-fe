@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, BookOpen, Calendar, FileText,
   ClipboardList, Bell, LogOut, Menu, GraduationCap,
   Activity, Shield, ChevronRight, Wifi, WifiOff, BookMarked,
-  Clock, BarChart3, BookCopy, UserCheck, PenLine
+  Clock, BarChart3, BookCopy, UserCheck, PenLine, User
 } from 'lucide-react'
 import clsx from 'clsx'
 import NotificationDropdown from './NotificationDropdown'
@@ -127,10 +127,14 @@ export default function Layout() {
         )}
 
         <div className={clsx('flex items-center gap-3 px-3 py-2 rounded-lg', ROLE_BG[user?.role], 'border mb-2')}>
-          <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center flex-shrink-0">
-            <span className={clsx('text-xs font-bold font-display', ROLE_COLORS[user?.role])}>
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
-            </span>
+          <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {user?.avatar ? (
+              <img src={user?.avatar} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className={clsx('text-xs font-bold font-display', ROLE_COLORS[user?.role])}>
+                {user?.firstName?.[0]}{user?.lastName?.[0]}
+              </span>
+            )}
           </div>
           {sidebarOpen && (
             <div className="min-w-0">
@@ -139,6 +143,20 @@ export default function Layout() {
             </div>
           )}
         </div>
+
+        <NavLink
+          to="/profile"
+          className={({ isActive }) => clsx(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all w-full mb-1 group',
+            isActive 
+              ? 'bg-azure-600/15 text-azure-400 border border-azure-500/20' 
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+          )}
+          onClick={() => setMobileOpen(false)}
+        >
+          <User className="w-4 h-4 flex-shrink-0" />
+          {sidebarOpen && <span>My Profile</span>}
+        </NavLink>
 
         <button
           onClick={handleLogout}

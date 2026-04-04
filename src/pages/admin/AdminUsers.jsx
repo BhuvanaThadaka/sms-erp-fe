@@ -46,22 +46,22 @@ export default function AdminUsers() {
 
   const createMutation = useMutation({
     mutationFn: usersAPI.create,
-    onSuccess: () => { toast.success('User created'); qc.invalidateQueries(['users']); setShowCreate(false); resetForm() },
+    onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => usersAPI.update(id, data),
-    onSuccess: () => { toast.success('User updated'); qc.invalidateQueries(['users']); setEditUser(null) },
+    onSuccess: () => { toast.success('User updated'); qc.invalidateQueries({ queryKey: ['users'] }); setEditUser(null) },
   })
 
   const activateMutation = useMutation({
     mutationFn: (id) => usersAPI.update(id, { isActive: true }),
-    onSuccess: () => { toast.success('User activated'); qc.invalidateQueries(['users']) },
+    onSuccess: () => { toast.success('User activated'); qc.invalidateQueries({ queryKey: ['users'] }) },
   })
 
   const deactivateMutation = useMutation({
     mutationFn: usersAPI.deactivate,
-    onSuccess: () => { toast.success('User deactivated'); qc.invalidateQueries(['users']) },
+    onSuccess: () => { toast.success('User deactivated'); qc.invalidateQueries({ queryKey: ['users'] }) },
   })
 
   const resetForm = () => setForm({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '', enrollmentNumber: '', employeeId: '' })
@@ -248,22 +248,75 @@ export default function AdminUsers() {
         {editUser && (
           <form onSubmit={(e) => {
             e.preventDefault()
-            updateMutation.mutate({ id: editUser._id, data: { firstName: editUser.firstName, lastName: editUser.lastName, phone: editUser.phone } })
-          }} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="First Name">
-                <input className="input" value={editUser.firstName} onChange={e => setEditUser(p => ({ ...p, firstName: e.target.value }))} required />
-              </Field>
-              <Field label="Last Name">
-                <input className="input" value={editUser.lastName} onChange={e => setEditUser(p => ({ ...p, lastName: e.target.value }))} required />
+            const payload = {
+              firstName: editUser.firstName,
+              lastName: editUser.lastName,
+              phone: editUser.phone,
+              address: editUser.address,
+            }
+            if (editUser.dateOfBirth) payload.dateOfBirth = editUser.dateOfBirth
+            updateMutation.mutate({ id: editUser._id, data: payload })
+          }} className="space-y-5">
+            {/* Identity Info (Read-only) */}
+            <div className="p-3 bg-slate-800/50 rounded-lg border border-white/5 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Account Identity (Read-only)</span>
+                <Badge status={editUser.role} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-slate-500 text-xs">Email</p>
+                  <p className="text-white truncate">{editUser.email}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs">ID</p>
+                  <p className="font-mono text-white">{editUser.enrollmentNumber || editUser.employeeId || '—'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Editable Fields */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="First Name">
+                  <input className="input" value={editUser.firstName} onChange={e => setEditUser(p => ({ ...p, firstName: e.target.value }))} required />
+                </Field>
+                <Field label="Last Name">
+                  <input className="input" value={editUser.lastName} onChange={e => setEditUser(p => ({ ...p, lastName: e.target.value }))} required />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Phone">
+                  <input className="input" value={editUser.phone || ''} onChange={e => setEditUser(p => ({ ...p, phone: e.target.value }))} />
+                </Field>
+                <Field label="Date of Birth">
+                  <input type="date" className="input" value={editUser.dateOfBirth ? new Date(editUser.dateOfBirth).toISOString().split('T')[0] : ''} onChange={e => setEditUser(p => ({ ...p, dateOfBirth: e.target.value }))} />
+                </Field>
+              </div>
+
+              <Field label="Address">
+                <textarea className="input min-h-[80px]" value={editUser.address || ''} onChange={e => setEditUser(p => ({ ...p, address: e.target.value }))} />
               </Field>
             </div>
-            <Field label="Phone">
-              <input className="input" value={editUser.phone || ''} onChange={e => setEditUser(p => ({ ...p, phone: e.target.value }))} />
-            </Field>
+
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={updateMutation.isPending} className="btn-primary flex-1 justify-center">
                 {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button 
+                type="button" 
+                disabled={deactivateMutation.isPending}
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete ${editUser.firstName}?`)) {
+                    deactivateMutation.mutate(editUser._id, {
+                      onSuccess: () => setEditUser(null)
+                    })
+                  }
+                }} 
+                className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
+              >
+                Delete
               </button>
               <button type="button" onClick={() => setEditUser(null)} className="btn-secondary">Cancel</button>
             </div>

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, BookOpen, Calendar, FileText,
   ClipboardList, Bell, LogOut, Menu, GraduationCap,
   Activity, Shield, ChevronRight, Wifi, WifiOff, BookMarked,
-  Clock, BarChart3, BarChart2, BookCopy, UserCheck, PenLine, User, Camera
+  Clock, BarChart3, BarChart2, BookCopy, UserCheck, PenLine, User, User, Camera
 } from 'lucide-react'
 import clsx from 'clsx'
 import NotificationDropdown from './NotificationDropdown'
@@ -147,6 +147,20 @@ export default function Layout() {
             </div>
           )}
         </div>
+
+        <NavLink
+          to="/profile"
+          className={({ isActive }) => clsx(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all w-full mb-1 group',
+            isActive 
+              ? 'bg-azure-600/15 text-azure-400 border border-azure-500/20' 
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+          )}
+          onClick={() => setMobileOpen(false)}
+        >
+          <User className="w-4 h-4 flex-shrink-0" />
+          {sidebarOpen && <span>My Profile</span>}
+        </NavLink>
 
         <button
           onClick={handleLogout}

@@ -297,6 +297,20 @@ export default function AdminUsers() {
               <button type="submit" disabled={updateMutation.isPending} className="btn-primary flex-1 justify-center">
                 {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
               </button>
+              <button 
+                type="button" 
+                disabled={deactivateMutation.isPending}
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete ${editUser.firstName}?`)) {
+                    deactivateMutation.mutate(editUser._id, {
+                      onSuccess: () => setEditUser(null)
+                    })
+                  }
+                }} 
+                className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
+              >
+                Delete
+              </button>
               <button type="button" onClick={() => setEditUser(null)} className="btn-secondary">Cancel</button>
             </div>
           </form>

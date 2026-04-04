@@ -71,7 +71,7 @@ export default function TeacherAttendance() {
     mutationFn: attendanceAPI.bulkMark,
     onSuccess: () => {
       toast.success('Attendance saved successfully!')
-      qc.invalidateQueries(['attendance'])
+      qc.invalidateQueries({ queryKey: ['attendance'] })
     },
   })
 
@@ -107,7 +107,7 @@ export default function TeacherAttendance() {
             <label className="label">Select Class</label>
             <select className="input" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
               <option value="">Choose class...</option>
-              {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
           <div>

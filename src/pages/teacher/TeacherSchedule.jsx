@@ -79,7 +79,7 @@ export default function TeacherSchedule() {
           <Field label="Class">
             <select className="input" value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value }))} required>
               <option value="">Select class...</option>
-              {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+              {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </Field>
           <Field label="Subject">

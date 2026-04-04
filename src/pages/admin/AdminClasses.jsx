@@ -4,6 +4,7 @@ import { classesAPI, usersAPI } from '../../api'
 import { SectionHeader, LoadingState, EmptyState, Modal, Field, Table, Pagination } from '../../components/ui'
 import { BookOpen, Plus, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
+import clsx from 'clsx'
 
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
 
@@ -14,7 +15,24 @@ export default function AdminClasses() {
   const [page, setPage] = useState(1)
   const limit = 10
   const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
+  const [classErrors, setClassErrors] = useState({})
   const [assignTeacherId, setAssignTeacherId] = useState('')
+
+  const resetClassForm = () => {
+    setForm({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
+    setClassErrors({})
+  }
+
+  const validateClass = () => {
+    const errs = {}
+    if (!form.name?.trim()) errs.name = 'Class name is required.'
+    if (!form.grade?.trim()) errs.grade = 'Grade is required.'
+    if (!form.section?.trim()) errs.section = 'Section is required.'
+    if (!form.academicYear?.trim()) errs.academicYear = 'Academic year is required.'
+    if (!form.maxStudents || form.maxStudents < 1) errs.maxStudents = 'Max students is required.'
+    setClassErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['classes', page],
@@ -33,7 +51,7 @@ export default function AdminClasses() {
 
   const createMutation = useMutation({
     mutationFn: classesAPI.create,
-    onSuccess: () => { toast.success('Class created'); qc.invalidateQueries({ queryKey: ['classes'] }); setShowCreate(false) },
+    onSuccess: () => { toast.success('Class created'); qc.invalidateQueries({ queryKey: ['classes'] }); setShowCreate(false); resetClassForm() },
   })
 
   const assignMutation = useMutation({
@@ -112,29 +130,29 @@ export default function AdminClasses() {
       </div>
 
       {/* Create Modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create New Class">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form) }} className="space-y-4">
-          <Field label="Class Name">
-            <input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Grade 10 - Section A" required />
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); resetClassForm() }} title="Create New Class">
+        <form onSubmit={(e) => { e.preventDefault(); if (!validateClass()) return; createMutation.mutate(form) }} className="space-y-4" noValidate>
+          <Field label="Class Name" required error={classErrors.name}>
+            <input className={clsx('input', classErrors.name && 'border-rose-500/50')} value={form.name} onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setClassErrors(p => ({...p, name: undefined})) }} placeholder="e.g. Grade 10 - Section A" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Grade">
-              <input className="input" value={form.grade} onChange={e => setForm(p => ({ ...p, grade: e.target.value }))} placeholder="10" required />
+            <Field label="Grade" required error={classErrors.grade}>
+              <input className={clsx('input', classErrors.grade && 'border-rose-500/50')} value={form.grade} onChange={e => { setForm(p => ({ ...p, grade: e.target.value })); setClassErrors(p => ({...p, grade: undefined})) }} placeholder="10" />
             </Field>
-            <Field label="Section">
-              <input className="input" value={form.section} onChange={e => setForm(p => ({ ...p, section: e.target.value }))} placeholder="A" required />
+            <Field label="Section" required error={classErrors.section}>
+              <input className={clsx('input', classErrors.section && 'border-rose-500/50')} value={form.section} onChange={e => { setForm(p => ({ ...p, section: e.target.value })); setClassErrors(p => ({...p, section: undefined})) }} placeholder="A" />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Room">
               <input className="input" value={form.room} onChange={e => setForm(p => ({ ...p, room: e.target.value }))} placeholder="Room 101" />
             </Field>
-            <Field label="Max Students">
-              <input type="number" className="input" value={form.maxStudents} onChange={e => setForm(p => ({ ...p, maxStudents: Number(e.target.value) }))} />
+            <Field label="Max Students" required error={classErrors.maxStudents}>
+              <input type="number" className={clsx('input', classErrors.maxStudents && 'border-rose-500/50')} value={form.maxStudents} onChange={e => { setForm(p => ({ ...p, maxStudents: Number(e.target.value) })); setClassErrors(p => ({...p, maxStudents: undefined})) }} />
             </Field>
           </div>
-          <Field label="Academic Year">
-            <input className="input" value={form.academicYear} onChange={e => setForm(p => ({ ...p, academicYear: e.target.value }))} required />
+          <Field label="Academic Year" required error={classErrors.academicYear}>
+            <input className={clsx('input', classErrors.academicYear && 'border-rose-500/50')} value={form.academicYear} onChange={e => { setForm(p => ({ ...p, academicYear: e.target.value })); setClassErrors(p => ({...p, academicYear: undefined})) }} />
           </Field>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={createMutation.isPending} className="btn-primary flex-1 justify-center">

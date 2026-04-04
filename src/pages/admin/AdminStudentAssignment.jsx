@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { usersAPI, classesAPI, assignmentAPI } from '../../api'
-import { SectionHeader, LoadingState, EmptyState, Table, Badge } from '../../components/ui'
+import { SectionHeader, LoadingState, EmptyState, Table, Badge, InfiniteSelect } from '../../components/ui'
 import { UserCheck, Search, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -10,8 +10,9 @@ export default function AdminStudentAssignment() {
   const qc = useQueryClient()
   const [classFilter, setClassFilter] = useState('')
   const [search, setSearch] = useState('')
-  const [selectedStudents, setSelectedStudents] = useState([])
-  const [targetClass, setTargetClass] = useState('')
+   const [selectedStudents, setSelectedStudents] = useState([])
+   const [targetClass, setTargetClass] = useState('')
+   const [rowAssignments, setRowAssignments] = useState({})
   const currentYear = '2024-2025'
 
   const { data: students, isLoading } = useQuery({
@@ -19,10 +20,22 @@ export default function AdminStudentAssignment() {
     queryFn: () => usersAPI.getAll({ role: 'STUDENT' }),
   })
 
-  const { data: classes } = useQuery({
-    queryKey: ['classes-all'],
-    queryFn: () => classesAPI.getAll(),
+  const { 
+    data: classesPages, 
+    fetchNextPage: fetchNextClasses, 
+    hasNextPage: hasNextClasses, 
+    isFetchingNextPage: isFetchingMoreClasses,
+    isLoading: isClassesLoading
+  } = useInfiniteQuery({
+    queryKey: ['classes-infinite'],
+    queryFn: ({ pageParam = 1 }) => classesAPI.getAll({ page: pageParam, limit: 10 }),
+    getNextPageParam: (lastPage) => (lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined),
+    initialPageParam: 1,
   })
+
+  const classOptions = classesPages?.pages.flatMap(page => 
+    page.classes?.map(c => ({ value: c._id, label: c.name })) || []
+  ) || []
 
   const assignMutation = useMutation({
     mutationFn: ({ studentId, classId }) => assignmentAPI.assignStudent(studentId, classId),
@@ -63,10 +76,17 @@ export default function AdminStudentAssignment() {
         action={
           selectedStudents.length > 0 && (
             <div className="flex items-center gap-3">
-              <select className="input max-w-[180px]" value={targetClass} onChange={e => setTargetClass(e.target.value)}>
-                <option value="">Select class...</option>
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-              </select>
+              <InfiniteSelect 
+                placeholder="Bulk Assign to..."
+                className="w-[180px]"
+                value={targetClass}
+                onChange={setTargetClass}
+                options={classOptions}
+                isLoading={isClassesLoading}
+                onFetchNextPage={fetchNextClasses}
+                hasNextPage={hasNextClasses}
+                isFetchingNextPage={isFetchingMoreClasses}
+              />
               <button
                 onClick={() => { if (!targetClass) return toast.error('Select a class'); bulkAssignMutation.mutate({ studentIds: selectedStudents, classId: targetClass }) }}
                 disabled={!targetClass || bulkAssignMutation.isPending}
@@ -86,29 +106,36 @@ export default function AdminStudentAssignment() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input className="input pl-9" placeholder="Search students..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="input max-w-[200px]" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
-          <option value="">All students</option>
-          <option value="unassigned">Unassigned</option>
-          {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-        </select>
+        <InfiniteSelect 
+          placeholder="Filter by class"
+          className="w-[200px]"
+          value={classFilter}
+          onChange={setClassFilter}
+          options={classOptions}
+          isLoading={isClassesLoading}
+          onFetchNextPage={fetchNextClasses}
+          hasNextPage={hasNextClasses}
+          isFetchingNextPage={isFetchingMoreClasses}
+        />
       </div>
 
       <div className="card overflow-hidden">
         {isLoading ? <LoadingState /> : (
           <Table
-            headers={['', 'Student', 'Enrollment No.', 'Current Class', 'Assign To', 'Action']}
+            headers={['S.No', '', 'Student', 'Enrollment No.', 'Current Class', 'Assign To', 'Action']}
             empty={!filtered.length ? <EmptyState icon={Users} title="No students found" /> : null}
           >
             <tr className="border-b border-white/5 bg-white/2">
-              <td colSpan={6} className="px-4 py-2">
+              <td colSpan={7} className="px-4 py-2">
                 <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
                   <input type="checkbox" checked={selectedStudents.length === filtered.length && filtered.length > 0} onChange={toggleAll} className="w-3.5 h-3.5 rounded" />
                   Select all {filtered.length} students
                 </label>
               </td>
             </tr>
-            {filtered.map(student => (
+            {filtered.map((student, idx) => (
               <tr key={student._id} className={clsx('table-row', selectedStudents.includes(student._id) && 'bg-azure-500/5')}>
+                <td className="table-td text-xs text-slate-400">{idx + 1}</td>
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
@@ -120,7 +147,7 @@ export default function AdminStudentAssignment() {
                 <td className="table-td">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-ink-700 border border-white/5 flex items-center justify-center">
-                      <span className="text-xs font-bold text-slate-300">{student.firstName[0]}{student.lastName[0]}</span>
+                      <span className="text-xs font-bold text-slate-300">{student.firstName?.charAt(0)}{student.lastName?.charAt(0)}</span>
                     </div>
                     <div>
                       <p className="text-white font-medium text-sm">{student.firstName} {student.lastName}</p>
@@ -139,20 +166,24 @@ export default function AdminStudentAssignment() {
                   )}
                 </td>
                 <td className="table-td">
-                  <select className="input text-xs py-1.5 max-w-[150px]"
-                    defaultValue=""
-                    id={`class-${student._id}`}
-                  >
-                    <option value="">Choose...</option>
-                    {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                  </select>
+                  <InfiniteSelect 
+                    placeholder="Choose..."
+                    className="w-[150px]"
+                    value={rowAssignments[student._id] || ''}
+                    onChange={val => setRowAssignments(p => ({ ...p, [student._id]: val }))}
+                    options={classOptions}
+                    isLoading={isClassesLoading}
+                    onFetchNextPage={fetchNextClasses}
+                    hasNextPage={hasNextClasses}
+                    isFetchingNextPage={isFetchingMoreClasses}
+                  />
                 </td>
                 <td className="table-td">
                   <button
                     onClick={() => {
-                      const sel = document.getElementById(`class-${student._id}`)
-                      if (!sel.value) return toast.error('Choose a class first')
-                      assignMutation.mutate({ studentId: student._id, classId: sel.value })
+                      const classId = rowAssignments[student._id]
+                      if (!classId) return toast.error('Choose a class first')
+                      assignMutation.mutate({ studentId: student._id, classId })
                     }}
                     disabled={assignMutation.isPending}
                     className="text-xs btn-primary py-1.5 disabled:opacity-50"

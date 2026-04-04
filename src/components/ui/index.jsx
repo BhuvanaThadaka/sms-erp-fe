@@ -225,3 +225,100 @@ export function Pagination({ page, totalPages, total, limit, onPageChange }) {
     </div>
   )
 }
+// ─── Infinite Select ───────────────────────────────────
+export function InfiniteSelect({ 
+  value, 
+  onChange, 
+  options = [], 
+  isLoading, 
+  onFetchNextPage, 
+  hasNextPage, 
+  isFetchingNextPage,
+  placeholder = "Select...",
+  className
+}) {
+  const [isOpen, setIsOpen] = React.useState(false)
+  const containerRef = React.useRef(null)
+  const observerRef = React.useRef(null)
+  const triggerRef = React.useRef(null)
+  const scrollContainerRef = React.useRef(null)
+
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const selectedOption = options.find(o => o.value === value)
+
+  const handleObserver = React.useCallback((entries) => {
+    const [target] = entries
+    if (target.isIntersecting && hasNextPage && !isFetchingNextPage && !isLoading) {
+      onFetchNextPage()
+    }
+  }, [hasNextPage, isFetchingNextPage, isLoading, onFetchNextPage])
+
+  React.useEffect(() => {
+    if (!isOpen) return
+    const option = { root: scrollContainerRef.current, rootMargin: '20px', threshold: 0 }
+    observerRef.current = new IntersectionObserver(handleObserver, option)
+    if (triggerRef.current) observerRef.current.observe(triggerRef.current)
+    return () => {
+      if (observerRef.current) observerRef.current.disconnect()
+    }
+  }, [handleObserver, isOpen])
+
+  return (
+    <div className={clsx("relative", className)} ref={containerRef}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className={clsx(
+          "input flex items-center justify-between cursor-pointer py-2",
+          isOpen && "ring-2 ring-azure-500/20 border-azure-500/50"
+        )}
+      >
+        <span className={clsx("truncate text-sm", !selectedOption && "text-slate-500")}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronRight className={clsx("w-4 h-4 transition-transform", isOpen ? "rotate-90" : "rotate-0")} />
+      </div>
+
+      {isOpen && (
+        <div ref={scrollContainerRef} className="absolute z-[100] mt-2 w-full max-h-60 overflow-y-auto bg-dark-card border border-white/10 rounded-xl shadow-2xl p-1 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div 
+            className="p-2 text-xs font-medium text-azure-400 hover:bg-white/5 cursor-pointer rounded-lg border-b border-white/5 mb-1"
+            onClick={() => { onChange(''); setIsOpen(false) }}
+          >
+            Clear Selection
+          </div>
+          {options.map((opt) => (
+            <div 
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setIsOpen(false) }}
+              className={clsx(
+                "p-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white cursor-pointer rounded-lg transition-colors",
+                value === opt.value && "bg-azure-500/10 text-azure-400"
+              )}
+            >
+              {opt.label}
+            </div>
+          ))}
+          
+          {isLoading ? (
+            <div className="p-4 flex justify-center"><Spinner /></div>
+          ) : hasNextPage ? (
+            <div ref={triggerRef} className="h-4 w-full flex justify-center py-4">
+              <Spinner className="w-4 h-4 text-slate-600" />
+            </div>
+          ) : options.length === 0 ? (
+            <div className="p-4 text-center text-xs text-slate-500">No items found</div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -77,7 +77,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
           <StatCard icon={Users} label="Total Students" value={students.length} sub="Active enrollments" color="azure" />
           <StatCard icon={Users} label="Total Teachers" value={teachers.length} sub="Active faculty" color="jade" />
-          <StatCard icon={BookOpen} label="Classes" value={classes?.length || 0} sub={`AY ${currentYear}`} color="amber" />
+          <StatCard icon={BookOpen} label="Classes" value={classes?.total ?? classes?.length ?? 0} sub={`AY ${currentYear}`} color="amber" />
           <StatCard icon={FileText} label="Reports" value={reports?.length || 0} sub="Generated this year" color="rose" />
         </div>
       )}
@@ -153,7 +153,7 @@ export default function AdminDashboard() {
             {users?.slice(0, 5).map(u => (
               <div key={u._id} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/3 transition-colors">
                 <div className="w-8 h-8 rounded-lg bg-ink-700 border border-white/5 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-slate-300">{u.firstName[0]}{u.lastName[0]}</span>
+                  <span className="text-xs font-bold text-slate-300">{u.firstName?.charAt(0)}{u.lastName?.charAt(0)}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white font-medium truncate">{u.firstName} {u.lastName}</p>

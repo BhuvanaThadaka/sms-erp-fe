@@ -80,7 +80,7 @@ export default function TeacherAcademicReports() {
       <div className="card p-4">
         <select className="input max-w-xs" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
           <option value="">All Classes</option>
-          {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>
 
@@ -135,7 +135,7 @@ export default function TeacherAcademicReports() {
             <Field label="Class">
               <select className="input" value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value, studentId: '' }))} required>
                 <option value="">Select class...</option>
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </Field>
             <Field label="Student">

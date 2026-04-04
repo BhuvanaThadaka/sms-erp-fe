@@ -28,6 +28,27 @@ export default function EventsPage() {
     endDate: format(new Date(), 'yyyy-MM-dd'),
     isAllClasses: true, venue: '', academicYear: '2024-2025', applicableClasses: []
   })
+  const [eventErrors, setEventErrors] = useState({})
+
+  const resetEventForm = () => {
+    setForm({
+      title: '', description: '', type: 'EXAM',
+      startDate: format(new Date(), 'yyyy-MM-dd'),
+      endDate: format(new Date(), 'yyyy-MM-dd'),
+      isAllClasses: true, venue: '', academicYear: '2024-2025', applicableClasses: []
+    })
+    setEventErrors({})
+  }
+
+  const validateEvent = () => {
+    const errs = {}
+    if (!form.title?.trim()) errs.title = 'Event title is required.'
+    if (!form.type) errs.type = 'Event type is required.'
+    if (!form.startDate) errs.startDate = 'Start date is required.'
+    if (!form.endDate) errs.endDate = 'End date is required.'
+    setEventErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
   const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
@@ -63,7 +84,7 @@ export default function EventsPage() {
 
   const createMutation = useMutation({
     mutationFn: eventsAPI.create,
-    onSuccess: () => { toast.success('Event created!'); qc.invalidateQueries({ queryKey: ['events'] }); setShowCreate(false) },
+    onSuccess: () => { toast.success('Event created!'); qc.invalidateQueries({ queryKey: ['events'] }); setShowCreate(false); resetEventForm() },
   })
 
   const deleteMutation = useMutation({
@@ -178,14 +199,14 @@ export default function EventsPage() {
       )}
 
       {/* Create Modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Event" size="lg">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form) }} className="space-y-4">
-          <Field label="Title">
-            <input className="input" value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} required />
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); resetEventForm() }} title="Create Event" size="lg">
+        <form onSubmit={(e) => { e.preventDefault(); if (!validateEvent()) return; createMutation.mutate(form) }} className="space-y-4" noValidate>
+          <Field label="Title" required error={eventErrors.title}>
+            <input className={clsx('input', eventErrors.title && 'border-rose-500/50')} value={form.title} onChange={e => { setForm(p => ({ ...p, title: e.target.value })); setEventErrors(p => ({...p, title: undefined})) }} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Type">
-              <select className="input" value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
+            <Field label="Type" required error={eventErrors.type}>
+              <select className={clsx('input', eventErrors.type && 'border-rose-500/50')} value={form.type} onChange={e => { setForm(p => ({ ...p, type: e.target.value })); setEventErrors(p => ({...p, type: undefined})) }}>
                 {EVENT_TYPES.map(t => <option key={t} value={t}>{EVENT_ICONS[t]} {t}</option>)}
               </select>
             </Field>
@@ -194,11 +215,11 @@ export default function EventsPage() {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Start Date">
-              <input type="date" className="input" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))} required />
+            <Field label="Start Date" required error={eventErrors.startDate}>
+              <input type="date" className={clsx('input', eventErrors.startDate && 'border-rose-500/50')} value={form.startDate} onChange={e => { setForm(p => ({ ...p, startDate: e.target.value })); setEventErrors(p => ({...p, startDate: undefined})) }} />
             </Field>
-            <Field label="End Date">
-              <input type="date" className="input" value={form.endDate} onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))} required />
+            <Field label="End Date" required error={eventErrors.endDate}>
+              <input type="date" className={clsx('input', eventErrors.endDate && 'border-rose-500/50')} value={form.endDate} onChange={e => { setForm(p => ({ ...p, endDate: e.target.value })); setEventErrors(p => ({...p, endDate: undefined})) }} />
             </Field>
           </div>
           <Field label="Description">
@@ -213,7 +234,7 @@ export default function EventsPage() {
               <select multiple className="input min-h-[80px]"
                 onChange={e => setForm(p => ({ ...p, applicableClasses: Array.from(e.target.selectedOptions, o => o.value) }))}
               >
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </Field>
           )}

@@ -78,11 +78,12 @@ export default function AdminAuditLogs() {
         {isLoading ? <LoadingState /> : (
           <>
             <Table
-              headers={['Action', 'Entity', 'Performed By', 'Details', 'Timestamp']}
+              headers={['S.No', 'Action', 'Entity', 'Performed By', 'Details', 'Timestamp']}
               empty={!logs.length ? <EmptyState icon={Shield} title="No logs found" /> : null}
             >
-              {logs.map(log => (
+              {logs.map((log, idx) => (
                 <tr key={log._id} className="table-row">
+                  <td className="table-td text-xs text-slate-400">{(page - 1) * limit + idx + 1}</td>
                   <td className="table-td">
                     <span className={clsx('text-xs px-2 py-0.5 rounded-full border', ACTION_COLORS[log.action] || 'text-slate-400 bg-ink-700 border-white/10')}>
                       {log.action?.replace(/_/g, ' ')}

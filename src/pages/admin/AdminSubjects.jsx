@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { subjectsAPI, classesAPI, usersAPI } from '../../api'
-import { SectionHeader, LoadingState, EmptyState, Modal, Field, Table } from '../../components/ui'
+import { SectionHeader, LoadingState, EmptyState, Modal, Field, Table, InfiniteSelect } from '../../components/ui'
 import { BookOpen, Plus, Pencil, Trash2, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -18,16 +18,37 @@ export default function AdminSubjects() {
     name: '', code: '', description: '', classId: '', subjectTeacher: '',
     academicYear: currentYear, maxMarks: 100, passingMarks: 40,
   })
+  const [subjectErrors, setSubjectErrors] = useState({})
+
+  const validateSubject = () => {
+    const errs = {}
+    if (!form.name?.trim()) errs.name = 'Subject name is required.'
+    if (!form.code?.trim()) errs.code = 'Subject code is required.'
+    setSubjectErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const { data: subjects, isLoading } = useQuery({
     queryKey: ['subjects', classFilter, currentYear],
     queryFn: () => subjectsAPI.getAll({ classId: classFilter || undefined, academicYear: currentYear }),
   })
 
-  const { data: classes } = useQuery({
-    queryKey: ['classes-all'],
-    queryFn: () => classesAPI.getAll(),
+  const { 
+    data: classesPages, 
+    fetchNextPage: fetchNextClasses, 
+    hasNextPage: hasNextClasses, 
+    isFetchingNextPage: isFetchingMoreClasses,
+    isLoading: isClassesLoading
+  } = useInfiniteQuery({
+    queryKey: ['classes-infinite'],
+    queryFn: ({ pageParam = 1 }) => classesAPI.getAll({ page: pageParam, limit: 10 }),
+    getNextPageParam: (lastPage) => (lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined),
+    initialPageParam: 1,
   })
+
+  const classOptions = classesPages?.pages.flatMap(page => 
+    page.classes?.map(c => ({ value: c._id, label: c.name })) || []
+  ) || []
 
   const { data: teachers } = useQuery({
     queryKey: ['teachers'],
@@ -49,7 +70,10 @@ export default function AdminSubjects() {
     onSuccess: () => { toast.success('Subject deactivated'); qc.invalidateQueries({ queryKey: ['subjects'] }) },
   })
 
-  const resetForm = () => setForm({ name: '', code: '', description: '', classId: '', subjectTeacher: '', academicYear: currentYear, maxMarks: 100, passingMarks: 40 })
+  const resetForm = () => {
+    setForm({ name: '', code: '', description: '', classId: '', subjectTeacher: '', academicYear: currentYear, maxMarks: 100, passingMarks: 40 })
+    setSubjectErrors({})
+  }
 
   const filtered = subjects?.filter(s =>
     s.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -74,10 +98,17 @@ export default function AdminSubjects() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input className="input pl-9" placeholder="Search subjects..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="input max-w-[200px]" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
-          <option value="">All Classes</option>
-          {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-        </select>
+        <InfiniteSelect 
+          placeholder="All Classes"
+          className="w-[200px]"
+          value={classFilter}
+          onChange={setClassFilter}
+          options={classOptions}
+          isLoading={isClassesLoading}
+          onFetchNextPage={fetchNextClasses}
+          hasNextPage={hasNextClasses}
+          isFetchingNextPage={isFetchingMoreClasses}
+        />
       </div>
 
       <div className="card overflow-hidden">
@@ -124,24 +155,30 @@ export default function AdminSubjects() {
 
       {/* Create Modal */}
       <Modal open={showCreate} onClose={() => { setShowCreate(false); resetForm() }} title="Create Subject" size="lg">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form) }} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); if (!validateSubject()) return; createMutation.mutate(form) }} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Subject Name">
-              <input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="e.g. Mathematics" />
+            <Field label="Subject Name" required error={subjectErrors.name}>
+              <input className={clsx('input', subjectErrors.name && 'border-rose-500/50')} value={form.name} onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setSubjectErrors(p => ({...p, name: undefined})) }} placeholder="e.g. Mathematics" />
             </Field>
-            <Field label="Subject Code">
-              <input className="input" value={form.code} onChange={e => setForm(p => ({ ...p, code: e.target.value }))} required placeholder="e.g. MATH10" />
+            <Field label="Subject Code" required error={subjectErrors.code}>
+              <input className={clsx('input', subjectErrors.code && 'border-rose-500/50')} value={form.code} onChange={e => { setForm(p => ({ ...p, code: e.target.value })); setSubjectErrors(p => ({...p, code: undefined})) }} placeholder="e.g. MATH10" />
             </Field>
           </div>
           <Field label="Description">
             <input className="input" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Class">
-              <select className="input" value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value }))} required>
-                <option value="">Select class...</option>
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-              </select>
+            <Field label="Class" required error={subjectErrors.classId}>
+              <InfiniteSelect 
+                placeholder="Select class..."
+                value={form.classId}
+                onChange={val => { setForm(p => ({ ...p, classId: val })); setSubjectErrors(p => ({...p, classId: undefined})) }}
+                options={classOptions}
+                isLoading={isClassesLoading}
+                onFetchNextPage={fetchNextClasses}
+                hasNextPage={hasNextClasses}
+                isFetchingNextPage={isFetchingMoreClasses}
+              />
             </Field>
             <Field label="Subject Teacher">
               <select className="input" value={form.subjectTeacher} onChange={e => setForm(p => ({ ...p, subjectTeacher: e.target.value }))} required>

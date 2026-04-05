@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, BookOpen, Calendar, FileText,
   ClipboardList, Bell, LogOut, Menu, GraduationCap,
   Activity, Shield, ChevronRight, Wifi, WifiOff, BookMarked,
-  Clock, BarChart3, BookCopy, UserCheck, PenLine, User
+  Clock, BarChart3, BarChart2, BookCopy, UserCheck, PenLine, User, Camera
 } from 'lucide-react'
 import clsx from 'clsx'
 import NotificationDropdown from './NotificationDropdown'
@@ -131,9 +131,9 @@ export default function Layout() {
         )}
 
         <div className={clsx('flex items-center gap-3 px-3 py-2 rounded-lg', ROLE_BG[user?.role], 'border mb-2')}>
-          <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/5">
             {user?.avatar ? (
-              <img src={user?.avatar} alt="Profile" className="w-full h-full object-cover" />
+              <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <span className={clsx('text-xs font-bold font-display', ROLE_COLORS[user?.role])}>
                 {user?.firstName?.[0]}{user?.lastName?.[0]}

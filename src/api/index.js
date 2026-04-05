@@ -44,6 +44,7 @@ export const usersAPI = {
   getMe: () => api.get('/users/me'),
   create: (data) => api.post('/users', data),
   update: (id, data) => api.patch(`/users/${id}`, data),
+  updateProfile: (id, data) => api.patch(`/users/${id}`, data),
   deactivate: (id) => api.delete(`/users/${id}`),
   getStudentsByClass: (classId) => api.get(`/users/class/${classId}/students`),
 }
@@ -66,6 +67,8 @@ export const attendanceAPI = {
     api.get(`/attendance/student/${studentId}/summary`, { params: { academicYear } }),
   getClassStats: (classId, date) =>
     api.get(`/attendance/class/${classId}/stats`, { params: { date } }),
+  getClassSummary: (classId, params) =>
+    api.get(`/attendance/class/${classId}/summary`, { params }),
 }
 
 // ─── Sessions ──────────────────────────────────────────

@@ -14,12 +14,12 @@ export default function AdminClasses() {
   const [showAssign, setShowAssign] = useState(null)
   const [page, setPage] = useState(1)
   const limit = 10
-  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
+  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35, classTeacher: '' })
   const [classErrors, setClassErrors] = useState({})
   const [assignTeacherId, setAssignTeacherId] = useState('')
 
   const resetClassForm = () => {
-    setForm({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
+    setForm({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35, classTeacher: '' })
     setClassErrors({})
   }
 
@@ -153,6 +153,14 @@ export default function AdminClasses() {
           </div>
           <Field label="Academic Year" required error={classErrors.academicYear}>
             <input className={clsx('input', classErrors.academicYear && 'border-rose-500/50')} value={form.academicYear} onChange={e => { setForm(p => ({ ...p, academicYear: e.target.value })); setClassErrors(p => ({...p, academicYear: undefined})) }} />
+          </Field>
+          <Field label="Class Teacher">
+            <select className="input" value={form.classTeacher} onChange={e => setForm(p => ({ ...p, classTeacher: e.target.value }))}>
+              <option value="">Choose a teacher...</option>
+              {teachers?.map(t => (
+                <option key={t._id} value={t._id}>{t.firstName} {t.lastName}</option>
+              ))}
+            </select>
           </Field>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={createMutation.isPending} className="btn-primary flex-1 justify-center">

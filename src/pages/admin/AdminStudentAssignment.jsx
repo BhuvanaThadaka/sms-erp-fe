@@ -60,8 +60,9 @@ export default function AdminStudentAssignment() {
     return String(id)
   }
 
+  const classes = classesPages?.pages.flatMap(page => page.classes || []) || []
   const studentList = students?.users || (Array.isArray(students) ? students : [])
-  const classList = classes?.classes || (Array.isArray(classes) ? classes : [])
+  const classList = classes
 
   const filtered = studentList.filter(s => {
     const searchStr = `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase()
@@ -193,17 +194,13 @@ export default function AdminStudentAssignment() {
                   )}
                 </td>
                 <td className="table-td">
-                  <InfiniteSelect 
-                    placeholder="Choose..."
-                    className="w-[150px]"
+                  <select className="input text-xs py-1.5 max-w-[150px]"
                     value={rowAssignments[student._id] || ''}
-                    onChange={val => setRowAssignments(p => ({ ...p, [student._id]: val }))}
-                    options={classOptions}
-                    isLoading={isClassesLoading}
-                    onFetchNextPage={fetchNextClasses}
-                    hasNextPage={hasNextClasses}
-                    isFetchingNextPage={isFetchingMoreClasses}
-                  />
+                    onChange={e => setRowAssignments(prev => ({ ...prev, [student._id]: e.target.value }))}
+                  >
+                    <option value="">Choose...</option>
+                    {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  </select>
                 </td>
                 <td className="table-td">
                   <button

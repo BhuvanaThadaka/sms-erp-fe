@@ -20,12 +20,13 @@ export default function AdminSubjects() {
   })
   const [subjectErrors, setSubjectErrors] = useState({})
 
-  const validateSubject = () => {
+  const validateSubject = (data) => {
     const errs = {}
-    if (!form.name?.trim()) errs.name = 'Subject name is required.'
-    if (!form.code?.trim()) errs.code = 'Subject code is required.'
-    setSubjectErrors(errs)
-    return Object.keys(errs).length === 0
+    if (!data.name?.trim()) errs.name = 'Subject name is required.'
+    if (!data.code?.trim()) errs.code = 'Subject code is required.'
+    if (!data.classId) errs.classId = 'Class is required.'
+    if (!data.subjectTeacher) errs.subjectTeacher = 'Teacher is required.'
+    return errs
   }
 
   const { data: subjects, isLoading } = useQuery({
@@ -155,7 +156,15 @@ export default function AdminSubjects() {
 
       {/* Create Modal */}
       <Modal open={showCreate} onClose={() => { setShowCreate(false); resetForm() }} title="Create Subject" size="lg">
-        <form onSubmit={(e) => { e.preventDefault(); if (!validateSubject()) return; createMutation.mutate(form) }} className="space-y-4" noValidate>
+        <form onSubmit={(e) => { 
+          e.preventDefault(); 
+          const errs = validateSubject(form);
+          if (Object.keys(errs).length > 0) {
+            setSubjectErrors(errs);
+            return;
+          }
+          createMutation.mutate(form);
+        }} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Subject Name" required error={subjectErrors.name}>
               <input className={clsx('input', subjectErrors.name && 'border-rose-500/50')} value={form.name} onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setSubjectErrors(p => ({...p, name: undefined})) }} placeholder="e.g. Mathematics" />
@@ -180,8 +189,8 @@ export default function AdminSubjects() {
                 isFetchingNextPage={isFetchingMoreClasses}
               />
             </Field>
-            <Field label="Subject Teacher">
-              <select className="input" value={form.subjectTeacher} onChange={e => setForm(p => ({ ...p, subjectTeacher: e.target.value }))} required>
+            <Field label="Subject Teacher" required error={subjectErrors.subjectTeacher}>
+              <select className={clsx('input', subjectErrors.subjectTeacher && 'border-rose-500/50')} value={form.subjectTeacher} onChange={e => { setForm(p => ({ ...p, subjectTeacher: e.target.value })); setSubjectErrors(p => ({...p, subjectTeacher: undefined})) }} required>
                 <option value="">Select teacher...</option>
                 {teachers?.map(t => <option key={t._id} value={t._id}>{t.firstName} {t.lastName}</option>)}
               </select>
@@ -205,10 +214,15 @@ export default function AdminSubjects() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal open={!!editSubject} onClose={() => setEditSubject(null)} title="Edit Subject" size="md">
+      <Modal open={!!editSubject} onClose={() => { setEditSubject(null); setSubjectErrors({}) }} title="Edit Subject" size="md">
         {editSubject && (
           <form onSubmit={(e) => {
             e.preventDefault()
+            const errs = validateSubject(editSubject);
+            if (Object.keys(errs).length > 0) {
+              setSubjectErrors(errs);
+              return;
+            }
             updateMutation.mutate({ id: editSubject._id, data: {
               name: editSubject.name,
               description: editSubject.description,
@@ -217,12 +231,13 @@ export default function AdminSubjects() {
               passingMarks: editSubject.passingMarks,
             }})
           }} className="space-y-4">
-            <Field label="Subject Name">
-              <input className="input" value={editSubject.name} onChange={e => setEditSubject(p => ({ ...p, name: e.target.value }))} required />
+            <Field label="Subject Name" required error={subjectErrors.name}>
+              <input className={clsx('input', subjectErrors.name && 'border-rose-500/50')} value={editSubject.name} onChange={e => { setEditSubject(p => ({ ...p, name: e.target.value })); setSubjectErrors(p => ({ ...p, name: undefined })) }} required />
             </Field>
-            <Field label="Subject Teacher">
-              <select className="input" value={editSubject.subjectTeacher?._id || editSubject.subjectTeacher || ''}
-                onChange={e => setEditSubject(p => ({ ...p, subjectTeacher: e.target.value }))}>
+            <Field label="Subject Teacher" required error={subjectErrors.subjectTeacher}>
+              <select className={clsx('input', subjectErrors.subjectTeacher && 'border-rose-500/50')} value={editSubject.subjectTeacher?._id || editSubject.subjectTeacher || ''}
+                onChange={e => { setEditSubject(p => ({ ...p, subjectTeacher: e.target.value })); setSubjectErrors(p => ({ ...p, subjectTeacher: undefined })) }}>
+                <option value="">Select teacher...</option>
                 {teachers?.map(t => <option key={t._id} value={t._id}>{t.firstName} {t.lastName}</option>)}
               </select>
             </Field>

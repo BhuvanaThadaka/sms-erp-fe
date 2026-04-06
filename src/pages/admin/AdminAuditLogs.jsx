@@ -37,15 +37,31 @@ export default function AdminAuditLogs() {
     keepPreviousData: true
   })
 
-  const rawLogs = data?.logs || (Array.isArray(data) ? data : [])
-  const total = data?.total || rawLogs.length
-  const totalPages = data?.totalPages || Math.ceil(total / limit) || 1
+  let rawLogs = data?.logs || (Array.isArray(data) ? data : [])
+  
+  if (search) {
+    const s = search.toLowerCase()
+    rawLogs = rawLogs.filter(log => {
+      const actionMatch = log.action?.replace(/_/g, ' ').toLowerCase().includes(s)
+      const entityMatch = log.entityType?.toLowerCase().includes(s) || log.entityId?.toLowerCase().includes(s)
+      const userMatch = log.performedBy && (
+        log.performedBy.role?.toLowerCase().includes(s) ||
+        log.performedBy.firstName?.toLowerCase().includes(s) ||
+        log.performedBy.lastName?.toLowerCase().includes(s)
+      )
+      const timestampMatch = log.timestamp && format(new Date(log.timestamp), 'MMM d, HH:mm').toLowerCase().includes(s)
+      
+      return actionMatch || entityMatch || userMatch || timestampMatch
+    })
+  }
+
+  const total = rawLogs.length
+  const totalPages = Math.ceil(total / limit) || 1
   
   // Client-side fallback: if the server returns all records (data.logs is missing and length > limit),
   // we slice it locally to ensure the user only sees what belongs on the current page.
-  const logs = (data && !data.logs && rawLogs.length > limit)
-    ? rawLogs.slice((page - 1) * limit, page * limit)
-    : rawLogs
+  // Actually, since we might have applied local search, we should always slice locally if we are using rawLogs
+  const logs = rawLogs.slice((page - 1) * limit, page * limit)
 
   return (
     <div className="space-y-5">

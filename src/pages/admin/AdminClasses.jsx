@@ -5,6 +5,7 @@ import { SectionHeader, LoadingState, EmptyState, Modal, Field, Table, Paginatio
 import { BookOpen, Plus, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { Trash2 } from 'lucide-react'
 
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
 
@@ -14,12 +15,13 @@ export default function AdminClasses() {
   const [showAssign, setShowAssign] = useState(null)
   const [page, setPage] = useState(1)
   const limit = 10
-  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35, classTeacher: '' })
+  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
   const [classErrors, setClassErrors] = useState({})
   const [assignTeacherId, setAssignTeacherId] = useState('')
+  const [showDelete, setShowDelete] = useState(null)
 
   const resetClassForm = () => {
-    setForm({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35, classTeacher: '' })
+    setForm({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
     setClassErrors({})
   }
 
@@ -59,6 +61,11 @@ export default function AdminClasses() {
     onSuccess: () => { toast.success('Teacher assigned'); qc.invalidateQueries({ queryKey: ['classes'] }); setShowAssign(null) },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: classesAPI.delete,
+    onSuccess: () => { toast.success('Class deleted'); qc.invalidateQueries({ queryKey: ['classes'] }) },
+  })
+
   const displayedClasses = (data && !data.classes && rawClasses.length > limit)
     ? rawClasses.slice((page - 1) * limit, page * limit)
     : rawClasses
@@ -79,7 +86,7 @@ export default function AdminClasses() {
         {isLoading ? <LoadingState /> : (
           <>
             <Table
-              headers={['S.No', 'Class', 'Grade', 'Room', 'Class Teacher', 'Teachers', 'Students Cap', 'Actions']}
+              headers={['S.No', 'Class', 'Grade', 'Room', 'Class Teacher', 'Students Cap', 'Actions']}
               empty={!displayedClasses.length ? <EmptyState icon={BookOpen} title="No classes yet" /> : null}
             >
               {displayedClasses.map((cls, idx) => (
@@ -101,18 +108,23 @@ export default function AdminClasses() {
                     ) : <span className="text-slate-600">Unassigned</span>}
                   </td>
                   <td className="table-td">
-                    <span className="text-slate-400">{cls.teachers?.length || 0} teachers</span>
-                  </td>
-                  <td className="table-td">
                     <span className="font-mono text-slate-400">{cls.maxStudents}</span>
                   </td>
                   <td className="table-td">
-                    <button
-                      onClick={() => { setShowAssign(cls); setAssignTeacherId('') }}
-                      className="flex items-center gap-1.5 text-xs text-azure-400 hover:text-azure-300 border border-azure-500/20 hover:border-azure-500/40 px-2.5 py-1.5 rounded-lg transition-all"
-                    >
-                      <Users className="w-3 h-3" /> Assign Teacher
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { setShowAssign(cls); setAssignTeacherId('') }}
+                        className="flex items-center gap-1.5 text-xs text-azure-400 hover:text-azure-300 border border-azure-500/20 hover:border-azure-500/40 px-2.5 py-1.5 rounded-lg transition-all"
+                      >
+                        <Users className="w-3 h-3" /> Assign Class Teacher
+                      </button>
+                      <button
+                        onClick={() => setShowDelete(cls)}
+                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -154,14 +166,6 @@ export default function AdminClasses() {
           <Field label="Academic Year" required error={classErrors.academicYear}>
             <input className={clsx('input', classErrors.academicYear && 'border-rose-500/50')} value={form.academicYear} onChange={e => { setForm(p => ({ ...p, academicYear: e.target.value })); setClassErrors(p => ({...p, academicYear: undefined})) }} />
           </Field>
-          <Field label="Class Teacher">
-            <select className="input" value={form.classTeacher} onChange={e => setForm(p => ({ ...p, classTeacher: e.target.value }))}>
-              <option value="">Choose a teacher...</option>
-              {teachers?.map(t => (
-                <option key={t._id} value={t._id}>{t.firstName} {t.lastName}</option>
-              ))}
-            </select>
-          </Field>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={createMutation.isPending} className="btn-primary flex-1 justify-center">
               {createMutation.isPending ? 'Creating...' : 'Create Class'}
@@ -191,6 +195,25 @@ export default function AdminClasses() {
               {assignMutation.isPending ? 'Assigning...' : 'Assign'}
             </button>
             <button onClick={() => setShowAssign(null)} className="btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!showDelete} onClose={() => setShowDelete(null)} title="Are you sure?" size="sm">
+        <div className="space-y-4">
+          <p className="text-slate-300 text-base">
+            Do you really want to delete class <span className="font-bold text-white">{showDelete?.name}</span>?
+          </p>
+          <div className="flex gap-3">
+            <button
+              disabled={deleteMutation.isPending}
+              onClick={() => { deleteMutation.mutate(showDelete._id); setShowDelete(null); }}
+              className="btn-primary flex-1 justify-center bg-rose-500 hover:bg-rose-600 border-rose-500 text-white disabled:opacity-50"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </button>
+            <button onClick={() => setShowDelete(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
           </div>
         </div>
       </Modal>

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersAPI } from '../../api'
 import { SectionHeader, Badge, LoadingState, EmptyState, Modal, Field, Table, Pagination } from '../../components/ui'
-import { Users, Plus, Search, UserCheck, UserX, Pencil } from 'lucide-react'
+import { Users, Plus, Search, UserCheck, Trash2, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -15,6 +15,7 @@ export default function AdminUsers() {
   const [page, setPage] = useState(1)
   const limit = 10
   const [showCreate, setShowCreate] = useState(false)
+  const [showDelete, setShowDelete] = useState(null)
   const [editUser, setEditUser] = useState(null)
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '' })
   const [errors, setErrors] = useState({})
@@ -62,7 +63,7 @@ export default function AdminUsers() {
 
   const deactivateMutation = useMutation({
     mutationFn: usersAPI.deactivate,
-    onSuccess: () => { toast.success('User deactivated'); qc.invalidateQueries({ queryKey: ['users'] }) },
+    onSuccess: () => { toast.success('User deleted'); qc.invalidateQueries({ queryKey: ['users'] }) },
   })
 
   const resetForm = () => {
@@ -210,10 +211,10 @@ export default function AdminUsers() {
                       </button>
                       {u.isActive ? (
                         <button
-                          onClick={() => { if (confirm(`Deactivate ${u.firstName}?`)) deactivateMutation.mutate(u._id) }}
+                          onClick={() => setShowDelete(u)}
                           className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
                         >
-                          <UserX className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       ) : (
                         <button
@@ -279,41 +280,54 @@ export default function AdminUsers() {
         {editUser && (
           <form onSubmit={(e) => {
             e.preventDefault()
-            updateMutation.mutate({ id: editUser._id, data: { firstName: editUser.firstName, lastName: editUser.lastName, phone: editUser.phone } })
-          }} className="space-y-4">
+            if (!validateEdit()) return
+            const payload = { firstName: editUser.firstName, lastName: editUser.lastName, phone: editUser.phone }
+            updateMutation.mutate({ id: editUser._id, data: payload })
+          }} className="space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="First Name">
-                <input className="input" value={editUser.firstName} onChange={e => setEditUser(p => ({ ...p, firstName: e.target.value }))} required />
+              <Field label="First Name" required error={errors.firstName}>
+                <input className={clsx("input", errors.firstName && "border-rose-500/50 focus:border-rose-500/50")} value={editUser.firstName} onChange={e => { setEditUser(p => ({ ...p, firstName: e.target.value.replace(/[0-9]/g, '') })); setErrors(p => ({...p, firstName: undefined})) }} maxLength={50} required />
               </Field>
-              <Field label="Last Name">
-                <input className="input" value={editUser.lastName} onChange={e => setEditUser(p => ({ ...p, lastName: e.target.value }))} required />
+              <Field label="Last Name" required error={errors.lastName}>
+                <input className={clsx("input", errors.lastName && "border-rose-500/50 focus:border-rose-500/50")} value={editUser.lastName} onChange={e => { setEditUser(p => ({ ...p, lastName: e.target.value.replace(/[0-9]/g, '') })); setErrors(p => ({...p, lastName: undefined})) }} maxLength={50} required />
               </Field>
             </div>
-            <Field label="Phone">
-              <input className="input" value={editUser.phone || ''} onChange={e => setEditUser(p => ({ ...p, phone: e.target.value }))} />
+            <Field label="Email" required>
+              <input type="email" className="input bg-ink-800/50 opacity-60 cursor-not-allowed" value={editUser.email || ''} disabled />
+            </Field>
+            <Field label="Role" required>
+               <input className="input bg-ink-800/50 opacity-60 cursor-not-allowed" value={editUser.role || ''} disabled />
+            </Field>
+            <Field label="Phone" required error={errors.phone}>
+              <input className={clsx("input", errors.phone && "border-rose-500/50 focus:border-rose-500/50")} value={editUser.phone || ''} onChange={e => { setEditUser(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') })); setErrors(p => ({...p, phone: undefined})) }} maxLength={10} required />
             </Field>
             <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={updateMutation.isPending} className="btn-primary flex-1 justify-center">
+              <button type="submit" disabled={updateMutation.isPending} className="btn-primary flex-1 justify-center disabled:opacity-50">
                 {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
               </button>
-              <button 
-                type="button" 
-                disabled={deactivateMutation.isPending}
-                onClick={() => {
-                  if (confirm(`Are you sure you want to delete ${editUser.firstName}?`)) {
-                    deactivateMutation.mutate(editUser._id, {
-                      onSuccess: () => setEditUser(null)
-                    })
-                  }
-                }} 
-                className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
-              >
-                Delete
-              </button>
-              <button type="button" onClick={() => setEditUser(null)} className="btn-secondary">Cancel</button>
+              <button type="button" onClick={() => setEditUser(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!showDelete} onClose={() => setShowDelete(null)} title="Are you sure?" size="sm">
+        <div className="space-y-4">
+          <p className="text-slate-300 text-base">
+            Do you really want to delete user <span className="font-bold text-white">{showDelete?.firstName} {showDelete?.lastName}</span>?
+          </p>
+          <div className="flex gap-3">
+            <button
+              disabled={deactivateMutation.isPending}
+              onClick={() => { deactivateMutation.mutate(showDelete._id); setShowDelete(null); }}
+              className="btn-primary flex-1 justify-center bg-rose-500 hover:bg-rose-600 border-rose-500 text-white disabled:opacity-50"
+            >
+              {deactivateMutation.isPending ? 'Deleting...' : 'Delete'}
+            </button>
+            <button onClick={() => setShowDelete(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

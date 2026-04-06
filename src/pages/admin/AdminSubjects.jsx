@@ -12,6 +12,7 @@ export default function AdminSubjects() {
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [editSubject, setEditSubject] = useState(null)
+  const [showDelete, setShowDelete] = useState(null)
   const currentYear = '2024-2025'
 
   const [form, setForm] = useState({
@@ -143,7 +144,7 @@ export default function AdminSubjects() {
                     <button onClick={() => setEditSubject(s)} className="p-1.5 text-slate-400 hover:text-azure-400 hover:bg-azure-500/10 rounded-lg">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => { if (confirm(`Deactivate ${s.name}?`)) deleteMutation.mutate(s._id) }} className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg">
+                    <button onClick={() => setShowDelete(s)} className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -225,22 +226,46 @@ export default function AdminSubjects() {
             }
             updateMutation.mutate({ id: editSubject._id, data: {
               name: editSubject.name,
+              code: editSubject.code,
               description: editSubject.description,
+              classId: editSubject.classId?._id || editSubject.classId,
               subjectTeacher: editSubject.subjectTeacher?._id || editSubject.subjectTeacher,
               maxMarks: editSubject.maxMarks,
               passingMarks: editSubject.passingMarks,
             }})
-          }} className="space-y-4">
-            <Field label="Subject Name" required error={subjectErrors.name}>
-              <input className={clsx('input', subjectErrors.name && 'border-rose-500/50')} value={editSubject.name} onChange={e => { setEditSubject(p => ({ ...p, name: e.target.value })); setSubjectErrors(p => ({ ...p, name: undefined })) }} required />
+          }} className="space-y-4" noValidate>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Subject Name" required error={subjectErrors.name}>
+                <input className={clsx('input', subjectErrors.name && 'border-rose-500/50')} value={editSubject.name} onChange={e => { setEditSubject(p => ({ ...p, name: e.target.value })); setSubjectErrors(p => ({ ...p, name: undefined })) }} required />
+              </Field>
+              <Field label="Subject Code" required error={subjectErrors.code}>
+                <input className={clsx('input', subjectErrors.code && 'border-rose-500/50')} value={editSubject.code} onChange={e => { setEditSubject(p => ({ ...p, code: e.target.value })); setSubjectErrors(p => ({ ...p, code: undefined })) }} required />
+              </Field>
+            </div>
+            <Field label="Description">
+              <input className="input" value={editSubject.description} onChange={e => setEditSubject(p => ({ ...p, description: e.target.value }))} />
             </Field>
-            <Field label="Subject Teacher" required error={subjectErrors.subjectTeacher}>
-              <select className={clsx('input', subjectErrors.subjectTeacher && 'border-rose-500/50')} value={editSubject.subjectTeacher?._id || editSubject.subjectTeacher || ''}
-                onChange={e => { setEditSubject(p => ({ ...p, subjectTeacher: e.target.value })); setSubjectErrors(p => ({ ...p, subjectTeacher: undefined })) }}>
-                <option value="">Select teacher...</option>
-                {teachers?.map(t => <option key={t._id} value={t._id}>{t.firstName} {t.lastName}</option>)}
-              </select>
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Class" required error={subjectErrors.classId}>
+                <InfiniteSelect 
+                  placeholder="Select class..."
+                  value={editSubject.classId?._id || editSubject.classId}
+                  onChange={val => { setEditSubject(p => ({ ...p, classId: val })); setSubjectErrors(p => ({...p, classId: undefined})) }}
+                  options={classOptions}
+                  isLoading={isClassesLoading}
+                  onFetchNextPage={fetchNextClasses}
+                  hasNextPage={hasNextClasses}
+                  isFetchingNextPage={isFetchingMoreClasses}
+                />
+              </Field>
+              <Field label="Subject Teacher" required error={subjectErrors.subjectTeacher}>
+                <select className={clsx('input', subjectErrors.subjectTeacher && 'border-rose-500/50')} value={editSubject.subjectTeacher?._id || editSubject.subjectTeacher || ''}
+                  onChange={e => { setEditSubject(p => ({ ...p, subjectTeacher: e.target.value })); setSubjectErrors(p => ({ ...p, subjectTeacher: undefined })) }}>
+                  <option value="">Select teacher...</option>
+                  {teachers?.map(t => <option key={t._id} value={t._id}>{t.firstName} {t.lastName}</option>)}
+                </select>
+              </Field>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Max Marks">
                 <input type="number" className="input" value={editSubject.maxMarks} onChange={e => setEditSubject(p => ({ ...p, maxMarks: Number(e.target.value) }))} />
@@ -255,6 +280,25 @@ export default function AdminSubjects() {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!showDelete} onClose={() => setShowDelete(null)} title="Are you sure?" size="sm">
+        <div className="space-y-4">
+          <p className="text-slate-300 text-base">
+            Do you really want to delete <span className="font-bold text-white">{showDelete?.name}</span>?
+          </p>
+          <div className="flex gap-3">
+            <button
+              disabled={deleteMutation.isPending}
+              onClick={() => { deleteMutation.mutate(showDelete._id); setShowDelete(null); }}
+              className="btn-primary flex-1 justify-center bg-rose-500 hover:bg-rose-600 border-rose-500 text-white disabled:opacity-50"
+            >
+              {deleteMutation.isPending ? 'Deactivating...' : 'Deactivate'}
+            </button>
+            <button onClick={() => setShowDelete(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

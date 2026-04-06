@@ -65,7 +65,7 @@ export default function TeacherMarksEntry() {
     mutationFn: marksAPI.bulkEnter,
     onSuccess: () => {
       toast.success('Marks saved successfully!')
-      qc.invalidateQueries(['marks'])
+      qc.invalidateQueries({ queryKey: ['marks'] })
     },
   })
 

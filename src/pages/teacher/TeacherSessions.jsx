@@ -6,6 +6,7 @@ import { SectionHeader, LoadingState, EmptyState, Modal, Field, Table } from '..
 import { BookMarked, Plus, Upload, Clock, FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import clsx from 'clsx'
 
 export default function TeacherSessions() {
   const { user } = useAuth()
@@ -19,6 +20,7 @@ export default function TeacherSessions() {
     duration: 60, academicYear: currentYear, materials: [], learningObjectives: []
   })
   const [noteForm, setNoteForm] = useState({ title: '', fileUrl: '', fileName: '', subject: '' })
+  const [errors, setErrors] = useState({})
   const [objInput, setObjInput] = useState('')
 
   const { data: sessions, isLoading } = useQuery({
@@ -33,7 +35,7 @@ export default function TeacherSessions() {
 
   const createSession = useMutation({
     mutationFn: sessionsAPI.create,
-    onSuccess: () => { toast.success('Session created!'); qc.invalidateQueries(['sessions']); setShowCreate(false); resetForm() },
+    onSuccess: () => { toast.success('Session created!'); qc.invalidateQueries({ queryKey: ['sessions'] }); setShowCreate(false); resetForm() },
   })
 
   const uploadNote = useMutation({
@@ -41,7 +43,19 @@ export default function TeacherSessions() {
     onSuccess: () => { toast.success('Note uploaded!'); setShowNote(null) },
   })
 
-  const resetForm = () => setForm({ classId: '', topic: '', description: '', sessionDate: format(new Date(), 'yyyy-MM-dd'), duration: 60, academicYear: currentYear, materials: [], learningObjectives: [] })
+  const resetForm = () => {
+    setForm({ classId: '', topic: '', description: '', sessionDate: format(new Date(), 'yyyy-MM-dd'), duration: 60, academicYear: currentYear, materials: [], learningObjectives: [] })
+    setErrors({})
+  }
+
+  const validateSession = (data) => {
+    const errs = {}
+    if (!data.classId) errs.classId = 'Class is required.'
+    if (!data.topic?.trim()) errs.topic = 'Topic is required.'
+    if (!data.sessionDate) errs.sessionDate = 'Date is required.'
+    if (!data.duration || data.duration <= 0) errs.duration = 'Duration must be greater than 0.'
+    return errs
+  }
 
   const addObjective = () => {
     if (!objInput.trim()) return
@@ -109,27 +123,36 @@ export default function TeacherSessions() {
 
       {/* Create Session Modal */}
       <Modal open={showCreate} onClose={() => { setShowCreate(false); resetForm() }} title="Create Session" size="lg">
-        <form onSubmit={(e) => { e.preventDefault(); createSession.mutate(form) }} className="space-y-4">
+        <form onSubmit={(e) => { 
+          e.preventDefault(); 
+          const errs = validateSession(form);
+          if (Object.keys(errs).length > 0) {
+            setErrors(errs);
+            return;
+          }
+          createSession.mutate(form) 
+        }} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Class">
-              <select className="input" value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value }))} required>
+            <Field label="Class" required error={errors.classId}>
+              <select className={clsx('input', errors.classId && 'border-rose-500/50')} value={form.classId} onChange={e => { setForm(p => ({ ...p, classId: e.target.value })); setErrors(p => ({ ...p, classId: undefined })) }} required>
                 <option value="">Select class...</option>
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {/* Safe handling for both formats */}
+                {(Array.isArray(classes) ? classes : classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </Field>
-            <Field label="Session Date">
-              <input type="date" className="input" value={form.sessionDate} onChange={e => setForm(p => ({ ...p, sessionDate: e.target.value }))} required />
+            <Field label="Session Date" required error={errors.sessionDate}>
+              <input type="date" className={clsx('input', errors.sessionDate && 'border-rose-500/50')} value={form.sessionDate} onChange={e => { setForm(p => ({ ...p, sessionDate: e.target.value })); setErrors(p => ({ ...p, sessionDate: undefined })) }} required />
             </Field>
           </div>
-          <Field label="Topic">
-            <input className="input" value={form.topic} onChange={e => setForm(p => ({ ...p, topic: e.target.value }))} required placeholder="e.g. Introduction to Algebra" />
+          <Field label="Topic" required error={errors.topic}>
+            <input className={clsx('input', errors.topic && 'border-rose-500/50')} value={form.topic} onChange={e => { setForm(p => ({ ...p, topic: e.target.value })); setErrors(p => ({ ...p, topic: undefined })) }} required placeholder="e.g. Introduction to Algebra" />
           </Field>
           <Field label="Description">
             <textarea className="input min-h-[80px] resize-none" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="What was covered..." />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Duration (minutes)">
-              <input type="number" className="input" value={form.duration} onChange={e => setForm(p => ({ ...p, duration: Number(e.target.value) }))} required />
+            <Field label="Duration (minutes)" required error={errors.duration}>
+              <input type="number" className={clsx('input', errors.duration && 'border-rose-500/50')} value={form.duration} onChange={e => { setForm(p => ({ ...p, duration: Number(e.target.value) })); setErrors(p => ({ ...p, duration: undefined })) }} required />
             </Field>
           </div>
           <Field label="Learning Objectives">
@@ -159,19 +182,58 @@ export default function TeacherSessions() {
       <Modal open={!!showNote} onClose={() => setShowNote(null)} title="Upload Note" size="sm">
         <form onSubmit={(e) => {
           e.preventDefault()
+          const errs = {}
+          if (!noteForm.title?.trim()) errs.title = 'Title is required.'
+          if (!noteForm.subject?.trim()) errs.subject = 'Subject is required.'
+          if (!noteForm.fileName) errs.file = 'File is required.'
+          
+          if (Object.keys(errs).length > 0) {
+            setErrors(errs)
+            return
+          }
+          
           uploadNote.mutate({ ...noteForm, classId: noteForm.classId, sessionId: showNote, academicYear: currentYear })
-        }} className="space-y-4">
-          <Field label="Title">
-            <input className="input" value={noteForm.title} onChange={e => setNoteForm(p => ({ ...p, title: e.target.value }))} required />
+        }} className="space-y-4" noValidate>
+          <Field label="Title" required error={errors.title}>
+            <input className={clsx('input', errors.title && 'border-rose-500/50')} value={noteForm.title} onChange={e => { setNoteForm(p => ({ ...p, title: e.target.value })); setErrors(p => ({ ...p, title: undefined })) }} required />
           </Field>
-          <Field label="Subject">
-            <input className="input" value={noteForm.subject} onChange={e => setNoteForm(p => ({ ...p, subject: e.target.value }))} required />
+          <Field label="Subject" required error={errors.subject}>
+            <input className={clsx('input', errors.subject && 'border-rose-500/50')} value={noteForm.subject} onChange={e => { setNoteForm(p => ({ ...p, subject: e.target.value })); setErrors(p => ({ ...p, subject: undefined })) }} required />
           </Field>
-          <Field label="File URL">
-            <input className="input" value={noteForm.fileUrl} onChange={e => setNoteForm(p => ({ ...p, fileUrl: e.target.value }))} placeholder="https://drive.google.com/..." required />
-          </Field>
-          <Field label="File Name">
-            <input className="input" value={noteForm.fileName} onChange={e => setNoteForm(p => ({ ...p, fileName: e.target.value }))} placeholder="notes.pdf" required />
+          <Field label="Select File" required error={errors.file}>
+            <div className="relative group">
+              <input 
+                type="file" 
+                className="hidden" 
+                id="note-file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setNoteForm(p => ({ 
+                      ...p, 
+                      fileName: file.name, 
+                      fileUrl: `https://simulated-storage.com/${file.name}`,
+                      title: p.title || file.name.split('.')[0]
+                    }))
+                    setErrors(p => ({ ...p, file: undefined }))
+                  }
+                }}
+              />
+              <label 
+                htmlFor="note-file" 
+                className={clsx('input flex items-center justify-between cursor-pointer group-hover:border-azure-500/50 transition-colors', errors.file && 'border-rose-500/50')}
+              >
+                <span className={clsx("truncate text-sm", !noteForm.fileName && "text-slate-500")}>
+                  {noteForm.fileName || 'Choose a file...'}
+                </span>
+                <Upload className="w-4 h-4 text-slate-500 group-hover:text-azure-400" />
+              </label>
+            </div>
+            {noteForm.fileName && (
+              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
+                <FileText className="w-3 h-3" /> {noteForm.fileName}
+              </p>
+            )}
           </Field>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={uploadNote.isPending} className="btn-primary flex-1 justify-center">

@@ -63,9 +63,9 @@ export default function TeacherDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
-        <StatCard icon={BookOpen} label="My Classes" value={classes?.length || 0} color="azure" />
+        <StatCard icon={BookOpen} label="My Classes" value={classes?.total ?? classes?.length ?? 0} color="azure" />
         <StatCard icon={BookMarked} label="Sessions" value={sessions?.length || 0} color="jade" />
-        <StatCard icon={ClipboardList} label="Today's Classes" value={classes?.length || 0} color="amber" />
+        <StatCard icon={ClipboardList} label="Today's Classes" value={classes?.total ?? classes?.length ?? 0} color="amber" />
         <StatCard icon={Activity} label="Avg Attendance" value="82%" color="rose" />
       </div>
 

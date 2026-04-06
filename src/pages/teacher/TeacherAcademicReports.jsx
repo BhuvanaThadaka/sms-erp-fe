@@ -18,6 +18,7 @@ export default function TeacherAcademicReports() {
   const [showGenerate, setShowGenerate] = useState(false)
   const [showReport, setShowReport] = useState(null)
   const [form, setForm] = useState({ studentId: '', classId: '', quarter: 'Q1', academicYear: '2024-2025', teacherRemarks: '' })
+  const [errors, setErrors] = useState({})
   const currentYear = '2024-2025'
 
   const { data: reports, isLoading } = useQuery({
@@ -38,15 +39,29 @@ export default function TeacherAcademicReports() {
 
   const generateMutation = useMutation({
     mutationFn: academicReportsAPI.generate,
-    onSuccess: () => { toast.success('Academic report generated!'); qc.invalidateQueries(['academic-reports']); setShowGenerate(false) },
+    onSuccess: () => { 
+      toast.success('Academic report generated!')
+      qc.invalidateQueries({ queryKey: ['academic-reports'] })
+      setShowGenerate(false)
+      setErrors({})
+      setForm({ studentId: '', classId: '', quarter: 'Q1', academicYear: '2024-2025', teacherRemarks: '' })
+    },
   })
+
+  const validateReport = (data) => {
+    const errs = {}
+    if (!data.classId) errs.classId = 'Class is required.'
+    if (!data.studentId) errs.studentId = 'Student is required.'
+    if (!data.quarter) errs.quarter = 'Quarter is required.'
+    return errs
+  }
 
   const bulkMutation = useMutation({
     mutationFn: academicReportsAPI.bulkGenerate,
     onSuccess: (data) => {
       const ok = data.filter(r => r.success).length
       toast.success(`Generated ${ok} reports`)
-      qc.invalidateQueries(['academic-reports'])
+      qc.invalidateQueries({ queryKey: ['academic-reports'] })
     },
   })
 
@@ -80,7 +95,7 @@ export default function TeacherAcademicReports() {
       <div className="card p-4">
         <select className="input max-w-xs" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
           <option value="">All Classes</option>
-          {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          {(Array.isArray(classes) ? classes : classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>
 
@@ -129,28 +144,37 @@ export default function TeacherAcademicReports() {
       )}
 
       {/* Generate Modal */}
-      <Modal open={showGenerate} onClose={() => setShowGenerate(false)} title="Generate Academic Report" size="lg">
-        <form onSubmit={(e) => { e.preventDefault(); generateMutation.mutate(form) }} className="space-y-4">
+      <Modal open={showGenerate} onClose={() => { setShowGenerate(false); setErrors({}) }} title="Generate Academic Report" size="lg">
+        <form onSubmit={(e) => { 
+          e.preventDefault()
+          const errs = validateReport(form)
+          if (Object.keys(errs).length > 0) {
+            setErrors(errs)
+            return
+          }
+          generateMutation.mutate(form) 
+        }} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Class">
-              <select className="input" value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value, studentId: '' }))} required>
+            <Field label="Class" required error={errors.classId}>
+              <select className={clsx('input', errors.classId && 'border-rose-500/50')} value={form.classId} onChange={e => { setForm(p => ({ ...p, classId: e.target.value, studentId: '' })); setErrors(p => ({ ...p, classId: undefined })) }} required>
                 <option value="">Select class...</option>
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {(Array.isArray(classes) ? classes : classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </Field>
-            <Field label="Student">
-              <select className="input" value={form.studentId} onChange={e => setForm(p => ({ ...p, studentId: e.target.value }))} required disabled={!form.classId}>
+            <Field label="Student" required error={errors.studentId}>
+              <select className={clsx('input', errors.studentId && 'border-rose-500/50')} value={form.studentId} onChange={e => { setForm(p => ({ ...p, studentId: e.target.value })); setErrors(p => ({ ...p, studentId: undefined })) }} required disabled={!form.classId}>
                 <option value="">Select student...</option>
                 {students?.map(s => <option key={s._id} value={s._id}>{s.firstName} {s.lastName}</option>)}
               </select>
             </Field>
           </div>
-          <Field label="Quarter">
+          <Field label="Quarter" required error={errors.quarter}>
             <div className="flex gap-2">
               {QUARTERS.map(q => (
-                <button key={q} type="button" onClick={() => setForm(p => ({ ...p, quarter: q }))}
+                <button key={q} type="button" onClick={() => { setForm(p => ({ ...p, quarter: q })); setErrors(p => ({ ...p, quarter: undefined })) }}
                   className={clsx('flex-1 py-2 rounded-lg text-sm border transition-all',
-                    form.quarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10'
+                    form.quarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10',
+                    errors.quarter && 'border-rose-500/50'
                   )}>
                   {q}
                 </button>

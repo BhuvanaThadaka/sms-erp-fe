@@ -16,7 +16,8 @@ export default function AdminUsers() {
   const limit = 10
   const [showCreate, setShowCreate] = useState(false)
   const [editUser, setEditUser] = useState(null)
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '', enrollmentNumber: '', employeeId: '' })
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '' })
+  const [errors, setErrors] = useState({})
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', roleFilter, page, search],
@@ -47,6 +48,7 @@ export default function AdminUsers() {
   const createMutation = useMutation({
     mutationFn: usersAPI.create,
     onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
+    onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
   })
 
   const updateMutation = useMutation({
@@ -64,21 +66,56 @@ export default function AdminUsers() {
     onSuccess: () => { toast.success('User deactivated'); qc.invalidateQueries({ queryKey: ['users'] }) },
   })
 
-  const resetForm = () => setForm({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '', enrollmentNumber: '', employeeId: '' })
+  const resetForm = () => {
+    setForm({ firstName: '', lastName: '', email: '', password: '', role: 'STUDENT', phone: '' })
+    setErrors({})
+  }
+
+  const validateCreate = () => {
+    const errs = {}
+    if (!form.firstName?.trim()) errs.firstName = 'First name is required.'
+    else if (/\d/.test(form.firstName)) errs.firstName = 'First name should not contain numbers.'
+    
+    if (!form.lastName?.trim()) errs.lastName = 'Last name is required.'
+    else if (/\d/.test(form.lastName)) errs.lastName = 'Last name should not contain numbers.'
+    
+    if (!form.email?.trim()) errs.email = 'Email is required.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email must be in a valid format.'
+    
+    if (!form.password) errs.password = 'Password is required.'
+    else if (form.password.length < 8) errs.password = 'Password must be minimum 8 characters.'
+    else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(form.password)) 
+      errs.password = 'Password requires uppercase, lowercase, number, and symbol.'
+      
+    if (!form.phone?.trim()) errs.phone = 'Phone number is required.'
+    else if (!/^\d{10}$/.test(form.phone)) errs.phone = 'Phone number must be exactly 10 digits.'
+
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  const validateEdit = () => {
+    const errs = {}
+    if (!editUser.firstName?.trim()) errs.firstName = 'First name is required.'
+    else if (/\d/.test(editUser.firstName)) errs.firstName = 'First name should not contain numbers.'
+    
+    if (!editUser.lastName?.trim()) errs.lastName = 'Last name is required.'
+    else if (/\d/.test(editUser.lastName)) errs.lastName = 'Last name should not contain numbers.'
+    
+    if (!editUser.phone?.trim()) errs.phone = 'Phone number is required.'
+    else if (!/^\d{10}$/.test(editUser.phone)) errs.phone = 'Phone number must be exactly 10 digits.'
+    
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const handleCreate = (e) => {
     e.preventDefault()
+    if (!validateCreate()) return
     const payload = { ...form }
     // Remove fields strictly forbidden by backend DTO
     delete payload.isActive
     
-    if (form.role === 'TEACHER') {
-      delete payload.enrollmentNumber
-      if (!payload.employeeId) return toast.error('Employee ID is required for teachers')
-    } else if (form.role === 'STUDENT') {
-      delete payload.employeeId
-      if (!payload.enrollmentNumber) return toast.error('Enrollment Number is required for students')
-    }
     createMutation.mutate(payload)
   }
 
@@ -128,13 +165,16 @@ export default function AdminUsers() {
         {isLoading ? <LoadingState /> : (
           <>
             <Table
-              headers={['User', 'Role', 'Contact', 'ID', 'Status', 'Actions']}
+              headers={['S.No', 'User', 'Role', 'Contact', 'ID', 'Status', 'Actions']}
               empty={displayedUsers.length === 0 ? (
                 <EmptyState icon={Users} title="No users found" description="Try adjusting your filters" />
               ) : null}
             >
-              {displayedUsers.map(u => (
+              {displayedUsers.map((u, idx) => (
                 <tr key={u._id} className="table-row">
+                  <td className="table-td text-xs text-slate-400">
+                    {(page - 1) * limit + idx + 1}
+                  </td>
                   <td className="table-td">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-ink-700 border border-white/5 flex items-center justify-center flex-shrink-0">
@@ -203,37 +243,29 @@ export default function AdminUsers() {
 
       {/* Create Modal */}
       <Modal open={showCreate} onClose={() => { setShowCreate(false); resetForm() }} title="Create New User" size="md">
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={handleCreate} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="First Name">
-              <input className="input" value={form.firstName} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} required />
+            <Field label="First Name" required error={errors.firstName}>
+              <input className={clsx("input", errors.firstName && "border-rose-500/50 focus:border-rose-500/50")} value={form.firstName} onChange={e => { setForm(p => ({ ...p, firstName: e.target.value.replace(/[0-9]/g, '') })); setErrors(p => ({...p, firstName: undefined})) }} maxLength={50} />
             </Field>
-            <Field label="Last Name">
-              <input className="input" value={form.lastName} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} required />
+            <Field label="Last Name" required error={errors.lastName}>
+              <input className={clsx("input", errors.lastName && "border-rose-500/50 focus:border-rose-500/50")} value={form.lastName} onChange={e => { setForm(p => ({ ...p, lastName: e.target.value.replace(/[0-9]/g, '') })); setErrors(p => ({...p, lastName: undefined})) }} maxLength={50} />
             </Field>
           </div>
-          <Field label="Email">
-            <input type="email" className="input" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} required />
+          <Field label="Email" required error={errors.email}>
+            <input type="email" className={clsx("input", errors.email && "border-rose-500/50 focus:border-rose-500/50")} value={form.email} onChange={e => { setForm(p => ({ ...p, email: e.target.value })); setErrors(p => ({...p, email: undefined})) }} />
           </Field>
-          <Field label="Password">
-            <input type="password" className="input" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} required minLength={8} />
+          <Field label="Password" required error={errors.password}>
+            <input type="password" className={clsx("input", errors.password && "border-rose-500/50 focus:border-rose-500/50")} value={form.password} onChange={e => { setForm(p => ({ ...p, password: e.target.value })); setErrors(p => ({...p, password: undefined})) }} maxLength={50} />
           </Field>
-          <Field label="Role">
-            <select className="input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
+          <Field label="Role" required>
+            <select className="input" value={form.role} onChange={e => { setForm(p => ({ ...p, role: e.target.value })) }}>
               {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Phone">
-              <input className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
-            </Field>
-            <Field label={form.role === 'STUDENT' ? 'Enrollment No.' : 'Employee ID'}>
-              <input className="input"
-                value={form.role === 'STUDENT' ? form.enrollmentNumber : form.employeeId}
-                onChange={e => setForm(p => ({ ...p, [form.role === 'STUDENT' ? 'enrollmentNumber' : 'employeeId']: e.target.value }))}
-              />
-            </Field>
-          </div>
+          <Field label="Phone" required error={errors.phone}>
+            <input className={clsx("input", errors.phone && "border-rose-500/50 focus:border-rose-500/50")} value={form.phone} onChange={e => { setForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') })); setErrors(p => ({...p, phone: undefined})) }} maxLength={10} />
+          </Field>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={createMutation.isPending} className="btn-primary flex-1 justify-center disabled:opacity-50">
               {createMutation.isPending ? 'Creating...' : 'Create User'}
@@ -244,62 +276,23 @@ export default function AdminUsers() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Edit User" size="md">
+      <Modal open={!!editUser} onClose={() => { setEditUser(null); setErrors({}) }} title="Edit User" size="md">
         {editUser && (
           <form onSubmit={(e) => {
             e.preventDefault()
-            const payload = {
-              firstName: editUser.firstName,
-              lastName: editUser.lastName,
-              phone: editUser.phone,
-              address: editUser.address,
-            }
-            if (editUser.dateOfBirth) payload.dateOfBirth = editUser.dateOfBirth
-            updateMutation.mutate({ id: editUser._id, data: payload })
-          }} className="space-y-5">
-            {/* Identity Info (Read-only) */}
-            <div className="p-3 bg-slate-800/50 rounded-lg border border-white/5 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Account Identity (Read-only)</span>
-                <Badge status={editUser.role} />
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-slate-500 text-xs">Email</p>
-                  <p className="text-white truncate">{editUser.email}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs">ID</p>
-                  <p className="font-mono text-white">{editUser.enrollmentNumber || editUser.employeeId || '—'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Editable Fields */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="First Name">
-                  <input className="input" value={editUser.firstName} onChange={e => setEditUser(p => ({ ...p, firstName: e.target.value }))} required />
-                </Field>
-                <Field label="Last Name">
-                  <input className="input" value={editUser.lastName} onChange={e => setEditUser(p => ({ ...p, lastName: e.target.value }))} required />
-                </Field>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Phone">
-                  <input className="input" value={editUser.phone || ''} onChange={e => setEditUser(p => ({ ...p, phone: e.target.value }))} />
-                </Field>
-                <Field label="Date of Birth">
-                  <input type="date" className="input" value={editUser.dateOfBirth ? new Date(editUser.dateOfBirth).toISOString().split('T')[0] : ''} onChange={e => setEditUser(p => ({ ...p, dateOfBirth: e.target.value }))} />
-                </Field>
-              </div>
-
-              <Field label="Address">
-                <textarea className="input min-h-[80px]" value={editUser.address || ''} onChange={e => setEditUser(p => ({ ...p, address: e.target.value }))} />
+            updateMutation.mutate({ id: editUser._id, data: { firstName: editUser.firstName, lastName: editUser.lastName, phone: editUser.phone } })
+          }} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="First Name">
+                <input className="input" value={editUser.firstName} onChange={e => setEditUser(p => ({ ...p, firstName: e.target.value }))} required />
+              </Field>
+              <Field label="Last Name">
+                <input className="input" value={editUser.lastName} onChange={e => setEditUser(p => ({ ...p, lastName: e.target.value }))} required />
               </Field>
             </div>
-
+            <Field label="Phone">
+              <input className="input" value={editUser.phone || ''} onChange={e => setEditUser(p => ({ ...p, phone: e.target.value }))} />
+            </Field>
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={updateMutation.isPending} className="btn-primary flex-1 justify-center">
                 {updateMutation.isPending ? 'Saving...' : 'Save Changes'}

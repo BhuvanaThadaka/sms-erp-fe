@@ -17,6 +17,7 @@ export default function TeacherSchedule() {
   const [showCreate, setShowCreate] = useState(false)
   const currentYear = '2024-2025'
   const [form, setForm] = useState({ classId: '', teacher: user?._id || '', subject: '', dayOfWeek: 'MONDAY', startTime: '09:00', endTime: '10:00', room: '', academicYear: currentYear })
+  const [errors, setErrors] = useState({})
 
   const { data: schedule, isLoading } = useQuery({
     queryKey: ['schedule-my'],
@@ -30,8 +31,24 @@ export default function TeacherSchedule() {
 
   const createMutation = useMutation({
     mutationFn: scheduleAPI.create,
-    onSuccess: () => { toast.success('Schedule created!'); qc.invalidateQueries(['schedule-my']); setShowCreate(false) },
+    onSuccess: () => { 
+      toast.success('Schedule created!')
+      qc.invalidateQueries({ queryKey: ['schedule-my'] })
+      setShowCreate(false)
+      setErrors({})
+      setForm({ classId: '', teacher: user?._id || '', subject: '', dayOfWeek: 'MONDAY', startTime: '09:00', endTime: '10:00', room: '', academicYear: currentYear })
+    },
   })
+
+  const validateSchedule = (data) => {
+    const errs = {}
+    if (!data.classId) errs.classId = 'Class is required.'
+    if (!data.subject?.trim()) errs.subject = 'Subject is required.'
+    if (!data.dayOfWeek) errs.dayOfWeek = 'Day is required.'
+    if (!data.startTime) errs.startTime = 'Start time is required.'
+    if (!data.endTime) errs.endTime = 'End time is required.'
+    return errs
+  }
 
   const byDay = DAYS.reduce((acc, d) => {
     acc[d] = schedule?.filter(s => s.dayOfWeek === d) || []
@@ -74,25 +91,37 @@ export default function TeacherSchedule() {
         </div>
       )}
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add Schedule Slot" size="md">
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form) }} className="space-y-4">
-          <Field label="Class">
-            <select className="input" value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value }))} required>
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); setErrors({}) }} title="Add Schedule Slot" size="md">
+        <form onSubmit={(e) => { 
+          e.preventDefault()
+          const errs = validateSchedule(form)
+          if (Object.keys(errs).length > 0) {
+            setErrors(errs)
+            return
+          }
+          createMutation.mutate(form) 
+        }} className="space-y-4" noValidate>
+          <Field label="Class" required error={errors.classId}>
+            <select className={clsx('input', errors.classId && 'border-rose-500/50')} value={form.classId} onChange={e => { setForm(p => ({ ...p, classId: e.target.value })); setErrors(p => ({ ...p, classId: undefined })) }} required>
               <option value="">Select class...</option>
-              {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+              {(Array.isArray(classes) ? classes : classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </Field>
-          <Field label="Subject">
-            <input className="input" value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} required />
+          <Field label="Subject" required error={errors.subject}>
+            <input className={clsx('input', errors.subject && 'border-rose-500/50')} value={form.subject} onChange={e => { setForm(p => ({ ...p, subject: e.target.value })); setErrors(p => ({ ...p, subject: undefined })) }} required />
           </Field>
-          <Field label="Day">
-            <select className="input" value={form.dayOfWeek} onChange={e => setForm(p => ({ ...p, dayOfWeek: e.target.value }))}>
+          <Field label="Day" required error={errors.dayOfWeek}>
+            <select className={clsx('input', errors.dayOfWeek && 'border-rose-500/50')} value={form.dayOfWeek} onChange={e => { setForm(p => ({ ...p, dayOfWeek: e.target.value })); setErrors(p => ({ ...p, dayOfWeek: undefined })) }}>
               {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Start Time"><input type="time" className="input" value={form.startTime} onChange={e => setForm(p => ({ ...p, startTime: e.target.value }))} /></Field>
-            <Field label="End Time"><input type="time" className="input" value={form.endTime} onChange={e => setForm(p => ({ ...p, endTime: e.target.value }))} /></Field>
+            <Field label="Start Time" required error={errors.startTime}>
+              <input type="time" className={clsx('input', errors.startTime && 'border-rose-500/50')} value={form.startTime} onChange={e => { setForm(p => ({ ...p, startTime: e.target.value })); setErrors(p => ({ ...p, startTime: undefined })) }} />
+            </Field>
+            <Field label="End Time" required error={errors.endTime}>
+              <input type="time" className={clsx('input', errors.endTime && 'border-rose-500/50')} value={form.endTime} onChange={e => { setForm(p => ({ ...p, endTime: e.target.value })); setErrors(p => ({ ...p, endTime: undefined })) }} />
+            </Field>
           </div>
           <Field label="Room">
             <input className="input" value={form.room} onChange={e => setForm(p => ({ ...p, room: e.target.value }))} />

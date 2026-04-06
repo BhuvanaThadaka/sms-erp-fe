@@ -22,12 +22,14 @@ import TeacherReports from './pages/teacher/TeacherReports'
 import TeacherMarksEntry from './pages/teacher/TeacherMarksEntry'
 import TeacherClassPerformance from './pages/teacher/TeacherClassPerformance'
 import TeacherAcademicReports from './pages/teacher/TeacherAcademicReports'
+import TeacherAttendanceAnalysis from './pages/teacher/TeacherAttendanceAnalysis'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentAttendance from './pages/student/StudentAttendance'
 import StudentNotes from './pages/student/StudentNotes'
 import StudentSchedule from './pages/student/StudentSchedule'
 import StudentReports from './pages/student/StudentReports'
 import StudentReportCard from './pages/student/StudentReportCard'
+import Profile from './pages/shared/Profile'
 import EventsPage from './pages/EventsPage'
 import ProfilePage from './pages/ProfilePage'
 import Layout from './components/layout/Layout'
@@ -71,6 +73,7 @@ function AppRoutes() {
         {/* Teacher */}
         <Route path="teacher" element={<PrivateRoute roles={['TEACHER']}><TeacherDashboard /></PrivateRoute>} />
         <Route path="teacher/attendance" element={<PrivateRoute roles={['TEACHER']}><TeacherAttendance /></PrivateRoute>} />
+        <Route path="teacher/attendance-analysis" element={<PrivateRoute roles={['TEACHER']}><TeacherAttendanceAnalysis /></PrivateRoute>} />
         <Route path="teacher/marks" element={<PrivateRoute roles={['TEACHER']}><TeacherMarksEntry /></PrivateRoute>} />
         <Route path="teacher/class-performance" element={<PrivateRoute roles={['TEACHER']}><TeacherClassPerformance /></PrivateRoute>} />
         <Route path="teacher/sessions" element={<PrivateRoute roles={['TEACHER']}><TeacherSessions /></PrivateRoute>} />
@@ -89,6 +92,7 @@ function AppRoutes() {
         {/* Shared */}
         <Route path="events" element={<PrivateRoute><EventsPage /></PrivateRoute>} />
         <Route path="profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+        <Route path="profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

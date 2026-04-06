@@ -34,7 +34,7 @@ export default function TeacherReports() {
 
   const generateMutation = useMutation({
     mutationFn: reportsAPI.generate,
-    onSuccess: () => { toast.success('Report generated!'); qc.invalidateQueries(['reports']); setShowGenerate(false) },
+    onSuccess: () => { toast.success('Report generated!'); qc.invalidateQueries({ queryKey: ['reports'] }); setShowGenerate(false) },
   })
 
   const bulkMutation = useMutation({
@@ -42,7 +42,7 @@ export default function TeacherReports() {
     onSuccess: (data) => {
       const ok = data.filter(r => r.success).length
       toast.success(`Generated ${ok} reports`)
-      qc.invalidateQueries(['reports'])
+      qc.invalidateQueries({ queryKey: ['reports'] })
     },
   })
 
@@ -70,7 +70,7 @@ export default function TeacherReports() {
       <div className="card p-4">
         <select className="input max-w-xs" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
           <option value="">Filter by class...</option>
-          {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
       </div>
 
@@ -130,7 +130,7 @@ export default function TeacherReports() {
             <Field label="Class">
               <select className="input" value={form.classId} onChange={e => setForm(p => ({ ...p, classId: e.target.value, studentId: '' }))} required>
                 <option value="">Select class...</option>
-                {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </Field>
             <Field label="Student">

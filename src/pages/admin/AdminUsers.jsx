@@ -48,6 +48,7 @@ export default function AdminUsers() {
   const createMutation = useMutation({
     mutationFn: usersAPI.create,
     onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
+    onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
   })
 
   const updateMutation = useMutation({
@@ -279,23 +280,36 @@ export default function AdminUsers() {
         {editUser && (
           <form onSubmit={(e) => {
             e.preventDefault()
-            if (!validateEdit()) return
             updateMutation.mutate({ id: editUser._id, data: { firstName: editUser.firstName, lastName: editUser.lastName, phone: editUser.phone } })
-          }} className="space-y-4" noValidate>
+          }} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="First Name" required error={errors.firstName}>
-                <input className={clsx("input", errors.firstName && "border-rose-500/50 focus:border-rose-500/50")} value={editUser.firstName} onChange={e => { setEditUser(p => ({ ...p, firstName: e.target.value.replace(/[0-9]/g, '') })); setErrors(p => ({...p, firstName: undefined})) }} maxLength={50} />
+              <Field label="First Name">
+                <input className="input" value={editUser.firstName} onChange={e => setEditUser(p => ({ ...p, firstName: e.target.value }))} required />
               </Field>
-              <Field label="Last Name" required error={errors.lastName}>
-                <input className={clsx("input", errors.lastName && "border-rose-500/50 focus:border-rose-500/50")} value={editUser.lastName} onChange={e => { setEditUser(p => ({ ...p, lastName: e.target.value.replace(/[0-9]/g, '') })); setErrors(p => ({...p, lastName: undefined})) }} maxLength={50} />
+              <Field label="Last Name">
+                <input className="input" value={editUser.lastName} onChange={e => setEditUser(p => ({ ...p, lastName: e.target.value }))} required />
               </Field>
             </div>
-            <Field label="Phone" required error={errors.phone}>
-              <input className={clsx("input", errors.phone && "border-rose-500/50 focus:border-rose-500/50")} value={editUser.phone || ''} onChange={e => { setEditUser(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') })); setErrors(p => ({...p, phone: undefined})) }} maxLength={10} />
+            <Field label="Phone">
+              <input className="input" value={editUser.phone || ''} onChange={e => setEditUser(p => ({ ...p, phone: e.target.value }))} />
             </Field>
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={updateMutation.isPending} className="btn-primary flex-1 justify-center">
                 {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button 
+                type="button" 
+                disabled={deactivateMutation.isPending}
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete ${editUser.firstName}?`)) {
+                    deactivateMutation.mutate(editUser._id, {
+                      onSuccess: () => setEditUser(null)
+                    })
+                  }
+                }} 
+                className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
+              >
+                Delete
               </button>
               <button type="button" onClick={() => setEditUser(null)} className="btn-secondary">Cancel</button>
             </div>

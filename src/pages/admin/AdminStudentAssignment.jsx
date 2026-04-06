@@ -52,10 +52,37 @@ export default function AdminStudentAssignment() {
     },
   })
 
-  const filtered = students?.filter(s =>
-    `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase().includes(search.toLowerCase()) &&
-    (!classFilter || (s.classId?._id === classFilter || s.classId === classFilter))
-  ) || []
+  const normalizeID = (id) => {
+    if (!id) return null
+    if (typeof id === 'string') return id
+    if (id._id) return normalizeID(id._id)
+    if (id.$oid) return id.$oid
+    return String(id)
+  }
+
+  const studentList = students?.users || (Array.isArray(students) ? students : [])
+  const classList = classes?.classes || (Array.isArray(classes) ? classes : [])
+
+  const filtered = studentList.filter(s => {
+    const searchStr = `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase()
+    const matchesSearch = searchStr.includes(search.toLowerCase())
+    
+    const studentClassId = normalizeID(s.classId)
+    const filterId = normalizeID(classFilter)
+    const selectedClass = classList.find(c => normalizeID(c._id) === filterId)
+
+    let matchesClass = true
+    if (classFilter === 'unassigned') {
+      matchesClass = !studentClassId
+    } else if (classFilter) {
+      // Robust match: check ID first, then fallback to name comparison
+      const idMatch = studentClassId === filterId
+      const nameMatch = selectedClass && s.classId?.name === selectedClass.name
+      matchesClass = idMatch || nameMatch
+    }
+
+    return matchesSearch && matchesClass
+  })
 
   const toggleStudent = (id) => {
     setSelectedStudents(prev =>
@@ -106,17 +133,11 @@ export default function AdminStudentAssignment() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input className="input pl-9" placeholder="Search students..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <InfiniteSelect 
-          placeholder="Filter by class"
-          className="w-[200px]"
-          value={classFilter}
-          onChange={setClassFilter}
-          options={classOptions}
-          isLoading={isClassesLoading}
-          onFetchNextPage={fetchNextClasses}
-          hasNextPage={hasNextClasses}
-          isFetchingNextPage={isFetchingMoreClasses}
-        />
+        <select className="input max-w-[200px]" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
+          <option value="">All students</option>
+          <option value="unassigned">Unassigned</option>
+          {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+        </select>
       </div>
 
       <div className="card overflow-hidden">
@@ -166,17 +187,13 @@ export default function AdminStudentAssignment() {
                   )}
                 </td>
                 <td className="table-td">
-                  <InfiniteSelect 
-                    placeholder="Choose..."
-                    className="w-[150px]"
-                    value={rowAssignments[student._id] || ''}
-                    onChange={val => setRowAssignments(p => ({ ...p, [student._id]: val }))}
-                    options={classOptions}
-                    isLoading={isClassesLoading}
-                    onFetchNextPage={fetchNextClasses}
-                    hasNextPage={hasNextClasses}
-                    isFetchingNextPage={isFetchingMoreClasses}
-                  />
+                  <select className="input text-xs py-1.5 max-w-[150px]"
+                    defaultValue=""
+                    id={`class-${student._id}`}
+                  >
+                    <option value="">Choose...</option>
+                    {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  </select>
                 </td>
                 <td className="table-td">
                   <button

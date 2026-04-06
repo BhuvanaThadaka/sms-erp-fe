@@ -5,6 +5,9 @@ import { SocketProvider } from './contexts/SocketContext'
 
 // Pages
 import LoginPage from './pages/LoginPage'
+import RegistrationPage from './pages/RegistrationPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminClasses from './pages/admin/AdminClasses'
@@ -28,6 +31,7 @@ import StudentReports from './pages/student/StudentReports'
 import StudentReportCard from './pages/student/StudentReportCard'
 import Profile from './pages/shared/Profile'
 import EventsPage from './pages/EventsPage'
+import ProfilePage from './pages/ProfilePage'
 import Layout from './components/layout/Layout'
 
 function PrivateRoute({ children, roles }) {
@@ -52,6 +56,9 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <RoleRedirect /> : <LoginPage />} />
+      <Route path="/register" element={isAuthenticated ? <RoleRedirect /> : <RegistrationPage />} />
+      <Route path="/forgot-password" element={isAuthenticated ? <RoleRedirect /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password" element={isAuthenticated ? <RoleRedirect /> : <ResetPasswordPage />} />
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<RoleRedirect />} />
 
@@ -84,6 +91,7 @@ function AppRoutes() {
 
         {/* Shared */}
         <Route path="events" element={<PrivateRoute><EventsPage /></PrivateRoute>} />
+        <Route path="profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
         <Route path="profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
       </Route>
 

@@ -28,7 +28,7 @@ export default function AdminStudentAssignment() {
     isLoading: isClassesLoading
   } = useInfiniteQuery({
     queryKey: ['classes-infinite'],
-    queryFn: ({ pageParam = 1 }) => classesAPI.getAll({ page: pageParam, limit: 10 }),
+    queryFn: ({ pageParam = 1 }) => classesAPI.getAll({ page: pageParam, limit: 100 }),
     getNextPageParam: (lastPage) => (lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined),
     initialPageParam: 1,
   })

@@ -20,7 +20,7 @@ const NAV = {
     { to: '/admin/student-assignment', label: 'Assign Students', icon: UserCheck },
     { to: '/events', label: 'Events', icon: Calendar },
     { to: '/admin/audit-logs', label: 'Audit Logs', icon: Shield },
-    { to: '/profile', label: 'Profile', icon: User },
+    // { to: '/profile', label: 'Profile', icon: User },
   ],
   TEACHER: [
     { to: '/teacher', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -32,7 +32,7 @@ const NAV = {
     { to: '/teacher/schedule', label: 'Schedule', icon: Clock },
     { to: '/teacher/academic-reports', label: 'Academic Reports', icon: FileText },
     { to: '/events', label: 'Events', icon: Calendar },
-    { to: '/profile', label: 'Profile', icon: User },
+    // { to: '/profile', label: 'Profile', icon: User },
   ],
   STUDENT: [
     { to: '/student', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -42,7 +42,7 @@ const NAV = {
     { to: '/student/schedule', label: 'Schedule', icon: Clock },
     { to: '/student/reports', label: 'Term Reports', icon: BookCopy },
     { to: '/events', label: 'Events', icon: Calendar },
-    { to: '/profile', label: 'Profile', icon: User },
+    // { to: '/profile', label: 'Profile', icon: User },
   ],
 }
 
@@ -131,10 +131,14 @@ export default function Layout() {
         )}
 
         <div className={clsx('flex items-center gap-3 px-3 py-2 rounded-lg', ROLE_BG[user?.role], 'border mb-2')}>
-          <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center flex-shrink-0">
-            <span className={clsx('text-xs font-bold font-display', ROLE_COLORS[user?.role])}>
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
-            </span>
+          <div className="w-8 h-8 rounded-lg bg-ink-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className={clsx('text-xs font-bold font-display', ROLE_COLORS[user?.role])}>
+                {user?.firstName?.[0]}{user?.lastName?.[0]}
+              </span>
+            )}
           </div>
           {sidebarOpen && (
             <div className="min-w-0">

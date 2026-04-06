@@ -7,6 +7,7 @@ import {
   Calendar, Save, Loader2, Shield 
 } from 'lucide-react'
 import { format } from 'date-fns'
+import clsx from 'clsx'
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth()
@@ -18,6 +19,7 @@ export default function ProfilePage() {
     address: '',
     dateOfBirth: ''
   })
+  const [errors, setErrors] = useState({})
   const [avatarPreview, setAvatarPreview] = useState('')
   const fileInputRef = useRef(null)
 
@@ -38,6 +40,9 @@ export default function ProfilePage() {
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    if (errors[e.target.name]) {
+      setErrors(prev => ({ ...prev, [e.target.name]: undefined }))
+    }
   }
 
   const handlePhotoClick = () => {
@@ -67,6 +72,21 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Explicit Validation
+    const errs = {}
+    if (!formData.firstName?.trim()) errs.firstName = "First name is required"
+    if (!formData.lastName?.trim()) errs.lastName = "Last name is required"
+    if (!formData.phone || formData.phone.trim().length !== 10) errs.phone = "Phone number must be exactly 10 digits"
+    if (!formData.address?.trim()) errs.address = "Address is required"
+    if (!formData.dateOfBirth) errs.dateOfBirth = "Date of Birth is required"
+    else if (new Date(formData.dateOfBirth) >= new Date()) errs.dateOfBirth = "Date of Birth cannot be present or future"
+    
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -112,7 +132,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-ink-900 border border-white/5 rounded-2xl overflow-hidden shadow-xl">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           
           <div className="p-6 sm:p-8 space-y-8">
             {/* Avatar Section */}
@@ -161,7 +181,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300 ml-1">First Name</label>
+                <label className="text-sm font-medium text-slate-300 ml-1">First Name <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <input
@@ -169,14 +189,17 @@ export default function ProfilePage() {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    required
-                    className="w-full bg-ink-800 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all"
+                    className={clsx(
+                      "w-full bg-ink-800 border rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all",
+                      errors.firstName ? "border-rose-500/50" : "border-white/10"
+                    )}
                   />
                 </div>
+                {errors.firstName && <p className="text-rose-500 text-xs ml-1">{errors.firstName}</p>}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300 ml-1">Last Name</label>
+                <label className="text-sm font-medium text-slate-300 ml-1">Last Name <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <input
@@ -184,10 +207,13 @@ export default function ProfilePage() {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    required
-                    className="w-full bg-ink-800 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all"
+                    className={clsx(
+                      "w-full bg-ink-800 border rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all",
+                      errors.lastName ? "border-rose-500/50" : "border-white/10"
+                    )}
                   />
                 </div>
+                {errors.lastName && <p className="text-rose-500 text-xs ml-1">{errors.lastName}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -205,22 +231,30 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-300 ml-1">Phone Number</label>
+                <label className="text-sm font-medium text-slate-300 ml-1">Phone Number <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full bg-ink-800 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData(prev => ({ ...prev, phone: val }));
+                      if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }))
+                    }}
+                    placeholder="Enter 10-digit number"
+                    className={clsx(
+                      "w-full bg-ink-800 border rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all",
+                      errors.phone ? "border-rose-500/50" : "border-white/10"
+                    )}
                   />
                 </div>
+                {errors.phone && <p className="text-rose-500 text-xs ml-1">{errors.phone}</p>}
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-sm font-medium text-slate-300 ml-1">Address</label>
+                <label className="text-sm font-medium text-slate-300 ml-1">Address <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-4 w-5 h-5 text-slate-500" />
                   <textarea
@@ -229,13 +263,17 @@ export default function ProfilePage() {
                     onChange={handleChange}
                     placeholder="Enter your full address"
                     rows="3"
-                    className="w-full bg-ink-800 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all resize-none"
+                    className={clsx(
+                      "w-full bg-ink-800 border rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all resize-none",
+                      errors.address ? "border-rose-500/50" : "border-white/10"
+                    )}
                   ></textarea>
                 </div>
+                {errors.address && <p className="text-rose-500 text-xs ml-1">{errors.address}</p>}
               </div>
 
               <div className="space-y-1.5 md:col-span-1">
-                <label className="text-sm font-medium text-slate-300 ml-1">Date of Birth</label>
+                <label className="text-sm font-medium text-slate-300 ml-1">Date of Birth <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
                   <input
@@ -243,9 +281,14 @@ export default function ProfilePage() {
                     name="dateOfBirth"
                     value={formData.dateOfBirth}
                     onChange={handleChange}
-                    className="w-full bg-ink-800 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all [color-scheme:dark]"
+                    max={new Date(Date.now() - 86400000).toISOString().split("T")[0]}
+                    className={clsx(
+                      "w-full bg-ink-800 border rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-azure-500/50 focus:border-azure-500 transition-all [color-scheme:dark]",
+                      errors.dateOfBirth ? "border-rose-500/50" : "border-white/10"
+                    )}
                   />
                 </div>
+                {errors.dateOfBirth && <p className="text-rose-500 text-xs ml-1">{errors.dateOfBirth}</p>}
               </div>
             </div>
 

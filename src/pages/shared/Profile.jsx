@@ -18,6 +18,7 @@ export default function Profile() {
     avatar: user?.avatar || '',
     dateOfBirth: user?.dateOfBirth ? format(new Date(user.dateOfBirth), 'yyyy-MM-dd') : '',
   })
+  const [errors, setErrors] = useState({})
   const fileInputRef = useRef(null)
 
   const handleFileChange = (e) => {
@@ -37,6 +38,17 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const errs = {}
+    if (!formData.firstName?.trim()) errs.firstName = "First name is required"
+    if (!formData.lastName?.trim()) errs.lastName = "Last name is required"
+    if (!formData.phone || formData.phone.trim().length !== 10) errs.phone = "Phone number must be exactly 10 digits"
+    
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      return
+    }
+
     setSaving(true)
     try {
       const payload = { ...formData }
@@ -145,40 +157,45 @@ export default function Profile() {
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="label">First Name</label>
+                  <label className="label">First Name <span className="text-rose-500">*</span></label>
                   <input 
                     type="text" 
-                    className="input" 
+                    className={clsx("input", errors.firstName && "border-rose-500/50")} 
                     value={formData.firstName}
-                    onChange={e => setFormData(p => ({ ...p, firstName: e.target.value }))}
-                    required 
+                    onChange={e => { setFormData(p => ({ ...p, firstName: e.target.value })); setErrors(p => ({ ...p, firstName: undefined })) }}
                   />
+                  {errors.firstName && <p className="text-rose-500 text-xs mt-1">{errors.firstName}</p>}
                 </div>
                 <div>
-                  <label className="label">Last Name</label>
+                  <label className="label">Last Name <span className="text-rose-500">*</span></label>
                   <input 
                     type="text" 
-                    className="input" 
+                    className={clsx("input", errors.lastName && "border-rose-500/50")} 
                     value={formData.lastName}
-                    onChange={e => setFormData(p => ({ ...p, lastName: e.target.value }))}
-                    required 
+                    onChange={e => { setFormData(p => ({ ...p, lastName: e.target.value })); setErrors(p => ({ ...p, lastName: undefined })) }}
                   />
+                  {errors.lastName && <p className="text-rose-500 text-xs mt-1">{errors.lastName}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="label">Phone Number</label>
+                  <label className="label">Phone Number <span className="text-rose-500">*</span></label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                     <input 
                       type="tel" 
-                      className="input pl-10" 
+                      className={clsx("input pl-10", errors.phone && "border-rose-500/50")} 
                       value={formData.phone}
-                      onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData(p => ({ ...p, phone: val }));
+                        if (errors.phone) setErrors(p => ({ ...p, phone: undefined }))
+                      }}
                       placeholder="Enter 10-digit number"
                     />
                   </div>
+                  {errors.phone && <p className="text-rose-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
                 <div>
                   <label className="label">Email Address (Read-only)</label>
@@ -204,6 +221,7 @@ export default function Profile() {
                       className="input pl-10" 
                       value={formData.dateOfBirth}
                       onChange={e => setFormData(p => ({ ...p, dateOfBirth: e.target.value }))}
+                      max={new Date(Date.now() - 86400000).toISOString().split("T")[0]}
                     />
                   </div>
                 </div>

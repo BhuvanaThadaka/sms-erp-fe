@@ -18,7 +18,7 @@ export default function TeacherClassPerformance() {
 
   const { data: classes } = useQuery({
     queryKey: ['classes'],
-    queryFn: () => classesAPI.getAll({ academicYear: currentYear }),
+    queryFn: () => classesAPI.getAll({ academicYear: currentYear, limit: 500 }),
   })
 
   const { data: performance, isLoading } = useQuery({
@@ -42,7 +42,7 @@ export default function TeacherClassPerformance() {
       <div className="card p-4 flex flex-col sm:flex-row gap-3">
         <select className="input flex-1" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
           <option value="">Select class...</option>
-          {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+          {(classes?.classes || (Array.isArray(classes) ? classes : [])).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
         <div className="flex gap-2">
           <button onClick={() => setSelectedQuarter('')}

@@ -19,6 +19,7 @@ export default function EventsPage() {
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [showCreate, setShowCreate] = useState(false)
+  const [showDelete, setShowDelete] = useState(null)
   const [typeFilter, setTypeFilter] = useState('')
   const [page, setPage] = useState(1)
   const limit = 10
@@ -178,7 +179,7 @@ export default function EventsPage() {
                     </div>
                     {isAdmin && (
                       <button
-                        onClick={() => { if (confirm('Remove this event?')) deleteMutation.mutate(event._id) }}
+                        onClick={() => setShowDelete(event)}
                         className="text-slate-600 hover:text-rose-400 transition-colors text-lg leading-none flex-shrink-0"
                       >×</button>
                     )}
@@ -245,6 +246,25 @@ export default function EventsPage() {
             <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!showDelete} onClose={() => setShowDelete(null)} title="Are you sure?" size="sm">
+        <div className="space-y-4">
+          <p className="text-slate-300 text-base">
+            Do you really want to remove the event <span className="font-bold text-white">{showDelete?.title}</span>?
+          </p>
+          <div className="flex gap-3">
+            <button
+              disabled={deleteMutation.isPending}
+              onClick={() => { deleteMutation.mutate(showDelete._id); setShowDelete(null); }}
+              className="btn-primary flex-1 justify-center bg-rose-500 hover:bg-rose-600 border-rose-500 text-white disabled:opacity-50"
+            >
+              {deleteMutation.isPending ? 'Removing...' : 'Remove'}
+            </button>
+            <button onClick={() => setShowDelete(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

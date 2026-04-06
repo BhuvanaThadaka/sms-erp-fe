@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, BookOpen, Calendar, FileText,
   ClipboardList, Bell, LogOut, Menu, GraduationCap,
   Activity, Shield, ChevronRight, Wifi, WifiOff, BookMarked,
-  Clock, BarChart3, BarChart2, BookCopy, UserCheck, PenLine, User, Camera, User
+  Clock, BarChart3, BarChart2, BookCopy, UserCheck, PenLine, User, Camera,
 } from 'lucide-react'
 import clsx from 'clsx'
 import NotificationDropdown from './NotificationDropdown'

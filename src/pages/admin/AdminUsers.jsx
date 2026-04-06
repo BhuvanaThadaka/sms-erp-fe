@@ -48,7 +48,6 @@ export default function AdminUsers() {
   const createMutation = useMutation({
     mutationFn: usersAPI.create,
     onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
-    onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); setShowCreate(false); resetForm() },
   })
 
   const updateMutation = useMutation({

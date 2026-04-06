@@ -60,8 +60,9 @@ export default function AdminStudentAssignment() {
     return String(id)
   }
 
+  const classes = classesPages?.pages.flatMap(page => page.classes || []) || []
   const studentList = students?.users || (Array.isArray(students) ? students : [])
-  const classList = classes?.classes || (Array.isArray(classes) ? classes : [])
+  const classList = classes
 
   const filtered = studentList.filter(s => {
     const searchStr = `${s.firstName} ${s.lastName} ${s.email} ${s.enrollmentNumber || ''}`.toLowerCase()
@@ -188,8 +189,8 @@ export default function AdminStudentAssignment() {
                 </td>
                 <td className="table-td">
                   <select className="input text-xs py-1.5 max-w-[150px]"
-                    defaultValue=""
-                    id={`class-${student._id}`}
+                    value={rowAssignments[student._id] || ''}
+                    onChange={e => setRowAssignments(prev => ({ ...prev, [student._id]: e.target.value }))}
                   >
                     <option value="">Choose...</option>
                     {classes?.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}

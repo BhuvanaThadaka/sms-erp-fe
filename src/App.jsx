@@ -14,6 +14,7 @@ import AdminClasses from './pages/admin/AdminClasses'
 import AdminSubjects from './pages/admin/AdminSubjects'
 import AdminStudentAssignment from './pages/admin/AdminStudentAssignment'
 import AdminAuditLogs from './pages/admin/AdminAuditLogs'
+import AdminAcademicStructure from './pages/admin/AdminAcademicStructure'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherAttendance from './pages/teacher/TeacherAttendance'
 import TeacherSessions from './pages/teacher/TeacherSessions'
@@ -69,6 +70,7 @@ function AppRoutes() {
         <Route path="admin/subjects" element={<PrivateRoute roles={['ADMIN']}><AdminSubjects /></PrivateRoute>} />
         <Route path="admin/student-assignment" element={<PrivateRoute roles={['ADMIN']}><AdminStudentAssignment /></PrivateRoute>} />
         <Route path="admin/audit-logs" element={<PrivateRoute roles={['ADMIN']}><AdminAuditLogs /></PrivateRoute>} />
+        <Route path="admin/academic-structure" element={<PrivateRoute roles={['ADMIN']}><AdminAcademicStructure /></PrivateRoute>} />
 
         {/* Teacher */}
         <Route path="teacher" element={<PrivateRoute roles={['TEACHER']}><TeacherDashboard /></PrivateRoute>} />

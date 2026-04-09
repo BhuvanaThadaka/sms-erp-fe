@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, BookOpen, Calendar, FileText,
   ClipboardList, Bell, LogOut, Menu, GraduationCap,
   Activity, Shield, ChevronRight, Wifi, WifiOff, BookMarked,
-  Clock, BarChart3, BarChart2, BookCopy, UserCheck, PenLine, User, Camera,
+  Clock, BarChart3, BarChart2, BookCopy, UserCheck, PenLine, User, Camera, Layers,
 } from 'lucide-react'
 import clsx from 'clsx'
 import NotificationDropdown from './NotificationDropdown'
@@ -18,6 +18,7 @@ const NAV = {
     { to: '/admin/classes', label: 'Classes', icon: BookOpen },
     { to: '/admin/subjects', label: 'Subjects', icon: BookCopy },
     { to: '/admin/student-assignment', label: 'Assign Students', icon: UserCheck },
+    { to: '/admin/academic-structure', label: 'Academic Structure', icon: Layers },
     { to: '/events', label: 'Events', icon: Calendar },
     { to: '/admin/audit-logs', label: 'Audit Logs', icon: Shield },
     // { to: '/profile', label: 'Profile', icon: User },

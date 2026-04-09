@@ -16,7 +16,7 @@ const TeacherAttendanceAnalysis = () => {
 
   const { data: classesData } = useQuery({
     queryKey: ['classes', 'teacher'],
-    queryFn: () => classesAPI.getAll({ academicYear: currentYear, isClassTeacher: 'true' }),
+    queryFn: () => classesAPI.getAll({ academicYear: currentYear, isClassTeacher: 'false' }),
   })
 
   const rawClasses = Array.isArray(classesData) ? classesData : (classesData?.classes || [])

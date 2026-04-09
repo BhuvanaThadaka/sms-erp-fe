@@ -150,6 +150,15 @@ export const academicReportsAPI = {
   getById: (id) => api.get(`/academic-reports/${id}`),
 }
 
+// ─── Academic Structure ────────────────────────────────
+export const academicStructureAPI = {
+  create: (data) => api.post('/academic-structure', data),
+  getAll: (params) => api.get('/academic-structure', { params }),
+  getById: (id) => api.get(`/academic-structure/${id}`),
+  update: (id, data) => api.patch(`/academic-structure/${id}`, data),
+  delete: (id) => api.delete(`/academic-structure/${id}`),
+}
+
 // ─── Class Assignment (users) ──────────────────────────
 export const assignmentAPI = {
   assignStudent: (studentId, classId) => api.post(`/users/${studentId}/assign-class`, { classId }),

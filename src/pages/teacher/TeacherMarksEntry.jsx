@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { subjectsAPI, usersAPI, marksAPI } from '../../api'
+import { subjectsAPI, usersAPI, marksAPI, classesAPI } from '../../api'
 import { useAuth } from '../../contexts/AuthContext'
 import { SectionHeader, LoadingState, EmptyState, Field } from '../../components/ui'
-import { ClipboardList, Save, BookOpen } from 'lucide-react'
+import { ClipboardList, Save, BookOpen, Layers } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -24,6 +24,8 @@ export default function TeacherMarksEntry() {
   const qc = useQueryClient()
   const [selectedSubject, setSelectedSubject] = useState('')
   const [selectedQuarter, setSelectedQuarter] = useState('Q1')
+  const [selectedTerm, setSelectedTerm] = useState('')
+  const [selectedExam, setSelectedExam] = useState('')
   const [marks, setMarks] = useState({}) // { studentId: { marks, remarks, isAbsent } }
   const currentYear = '2024-2025'
 
@@ -35,6 +37,28 @@ export default function TeacherMarksEntry() {
   const currentSubject = mySubjects?.find(s => s._id === selectedSubject)
   const classId = currentSubject?.classId?._id || currentSubject?.classId
 
+  const { data: classDetails } = useQuery({
+    queryKey: ['class-details', classId],
+    queryFn: () => classesAPI.getById(classId),
+    enabled: !!classId,
+  })
+
+  const structure = classDetails?.academicStructure
+
+  // Set default term/exam when subject/structure changes
+  useEffect(() => {
+    if (structure?.terms?.length) {
+      const firstTerm = structure.terms[0]
+      setSelectedTerm(firstTerm.name)
+      if (firstTerm.exams?.length) {
+        setSelectedExam(firstTerm.exams[0].code)
+      }
+    } else {
+      setSelectedTerm('')
+      setSelectedExam('')
+    }
+  }, [selectedSubject, structure])
+
   const { data: students, isLoading: loadingStudents } = useQuery({
     queryKey: ['students', classId],
     queryFn: () => usersAPI.getStudentsByClass(classId),
@@ -42,8 +66,12 @@ export default function TeacherMarksEntry() {
   })
 
   const { data: existingMarks } = useQuery({
-    queryKey: ['marks', selectedSubject, selectedQuarter],
-    queryFn: () => marksAPI.getAll({ subjectId: selectedSubject, quarter: selectedQuarter, academicYear: currentYear }),
+    queryKey: ['marks', selectedSubject, structure ? selectedExam : selectedQuarter, selectedTerm],
+    queryFn: () => marksAPI.getAll({ 
+      subjectId: selectedSubject, 
+      academicYear: currentYear,
+      ...(structure ? { termName: selectedTerm, examCode: selectedExam } : { quarter: selectedQuarter })
+    }),
     enabled: !!selectedSubject,
   })
 
@@ -71,7 +99,15 @@ export default function TeacherMarksEntry() {
 
   const handleSave = () => {
     if (!selectedSubject || !students?.length) return
-    const maxMarks = currentSubject?.maxMarks || 100
+    
+    // Determine max marks from structure if available
+    let maxMarks = currentSubject?.maxMarks || 100
+    if (structure) {
+      const term = structure.terms.find(t => t.name === selectedTerm)
+      const exam = term?.exams.find(e => e.code === selectedExam)
+      if (exam?.maxMarks) maxMarks = exam.maxMarks
+    }
+
     const records = Object.entries(marks)
       .filter(([_, v]) => v.isAbsent || (v.marksObtained !== '' && v.marksObtained !== undefined))
       .map(([studentId, v]) => ({
@@ -86,7 +122,7 @@ export default function TeacherMarksEntry() {
     bulkMutation.mutate({
       subjectId: selectedSubject,
       classId,
-      quarter: selectedQuarter,
+      ...(structure ? { termName: selectedTerm, examCode: selectedExam } : { quarter: selectedQuarter }),
       maxMarks,
       academicYear: currentYear,
       records,
@@ -99,45 +135,74 @@ export default function TeacherMarksEntry() {
 
   const filledCount = Object.values(marks).filter(m => m.marksObtained !== '' || m.isAbsent).length
 
+  // Current Exam Info
+  const currentExamObj = structure?.terms?.find(t => t.name === selectedTerm)?.exams?.find(e => e.code === selectedExam)
+  const displayMaxMarks = structure ? (currentExamObj?.maxMarks || 100) : (currentSubject?.maxMarks || 100)
+
   return (
     <div className="space-y-5">
-      <SectionHeader title="Enter Marks" subtitle="Enter quarterly marks for your assigned subjects" />
+      <SectionHeader title="Enter Marks" subtitle="Enter marks for your assigned subjects and academic structure" />
 
-      {/* Subject & Quarter selector */}
+      {/* Subject & Assessment selector */}
       <div className="card p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Field label="My Subject">
-            {loadingSubjects ? <div className="input flex items-center text-slate-500 text-sm">Loading...</div> : (
-              <select className="input" value={selectedSubject} onChange={e => setSelectedSubject(e.target.value)}>
-                <option value="">Select subject...</option>
-                {mySubjects?.map(s => (
-                  <option key={s._id} value={s._id}>{s.name} — {s.classId?.name}</option>
-                ))}
-              </select>
-            )}
-          </Field>
-          <Field label="Quarter">
-            <div className="flex gap-2">
-              {QUARTERS.map(q => (
-                <button key={q} onClick={() => setSelectedQuarter(q)}
-                  className={clsx('flex-1 py-2 rounded-lg text-sm font-medium border transition-all',
-                    selectedQuarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10 hover:border-white/20'
-                  )}>
-                  {q}
-                </button>
-              ))}
-            </div>
-          </Field>
-          <Field label="Subject Info">
-            {currentSubject ? (
-              <div className="bg-ink-700 rounded-lg px-3 py-2.5 border border-white/5 text-sm">
-                <p className="text-white font-medium">{currentSubject.name}</p>
-                <p className="text-slate-500 text-xs">Max: {currentSubject.maxMarks} · Pass: {currentSubject.passingMarks}</p>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div className="md:col-span-4">
+            <Field label="My Subject">
+              {loadingSubjects ? <div className="input flex items-center text-slate-500 text-sm">Loading...</div> : (
+                <select className="input" value={selectedSubject} onChange={e => setSelectedSubject(e.target.value)}>
+                  <option value="">Select subject...</option>
+                  {mySubjects?.map(s => (
+                    <option key={s._id} value={s._id}>{s.name} — {s.classId?.name}</option>
+                  ))}
+                </select>
+              )}
+            </Field>
+          </div>
+
+          <div className="md:col-span-5">
+            {structure ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Term">
+                  <select className="input" value={selectedTerm} onChange={e => setSelectedTerm(e.target.value)}>
+                    {structure.terms.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                  </select>
+                </Field>
+                <Field label="Exam / Assessment">
+                  <select className="input" value={selectedExam} onChange={e => setSelectedExam(e.target.value)}>
+                    {structure.terms.find(t => t.name === selectedTerm)?.exams.map(e => (
+                      <option key={e.code} value={e.code}>{e.name} ({e.code})</option>
+                    ))}
+                  </select>
+                </Field>
               </div>
             ) : (
-              <div className="bg-ink-700 rounded-lg px-3 py-2.5 border border-white/5 text-slate-600 text-sm">Select a subject</div>
+              <Field label="Quarter (Legacy)">
+                <div className="flex gap-2">
+                  {QUARTERS.map(q => (
+                    <button key={q} onClick={() => setSelectedQuarter(q)}
+                      className={clsx('flex-1 py-1.5 rounded-lg text-sm font-medium border transition-all',
+                        selectedQuarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10 hover:border-white/20'
+                      )}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </Field>
             )}
-          </Field>
+          </div>
+
+          <div className="md:col-span-3">
+            <Field label="Subject / Exam Info">
+              <div className="bg-ink-700 rounded-lg px-3 py-2 border border-white/5 text-xs">
+                {currentSubject ? (
+                  <>
+                    <p className="text-white font-medium">{currentSubject.name}</p>
+                    <p className="text-slate-500">Max: {displayMaxMarks} · Pass: {currentSubject.passingMarks || Math.round(displayMaxMarks * 0.4)}</p>
+                  </>
+                ) : <p className="text-slate-600">Select a subject</p>}
+              </div>
+            </Field>
+          </div>
         </div>
       </div>
 
@@ -149,7 +214,9 @@ export default function TeacherMarksEntry() {
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
             <div>
-              <p className="text-white font-semibold font-display">{currentSubject?.name} — {selectedQuarter}</p>
+              <p className="text-white font-semibold font-display">
+                {currentSubject?.name} — {structure ? `${selectedTerm} (${selectedExam})` : selectedQuarter}
+              </p>
               <p className="text-slate-500 text-xs">{students.length} students · {filledCount} filled</p>
             </div>
             <div className="flex gap-2">
@@ -165,7 +232,7 @@ export default function TeacherMarksEntry() {
             {/* Header row */}
             <div className="grid grid-cols-12 gap-3 px-5 py-2.5 bg-white/2 text-xs text-slate-500 uppercase tracking-wider font-medium">
               <div className="col-span-3">Student</div>
-              <div className="col-span-2">Marks / {currentSubject?.maxMarks}</div>
+              <div className="col-span-2">Marks / {displayMaxMarks}</div>
               <div className="col-span-1 text-center">%</div>
               <div className="col-span-1 text-center">Grade</div>
               <div className="col-span-1 text-center">Absent</div>
@@ -174,10 +241,10 @@ export default function TeacherMarksEntry() {
 
             {students.map((student, idx) => {
               const m = marks[student._id] || {}
-              const maxM = currentSubject?.maxMarks || 100
+              const maxM = displayMaxMarks
               const pct = m.isAbsent ? 0 : (m.marksObtained !== '' ? Math.round((Number(m.marksObtained) / maxM) * 100) : null)
               const grade = pct !== null ? calcGrade(pct) : '—'
-              const isPass = pct !== null && pct >= ((currentSubject?.passingMarks || 40) / maxM * 100)
+              const isPass = pct !== null && pct >= ((currentSubject?.passingMarks || (maxM * 0.4)) / maxM * 100)
 
               return (
                 <div key={student._id} className="grid grid-cols-12 gap-3 px-5 py-3 items-center hover:bg-white/2 transition-colors">

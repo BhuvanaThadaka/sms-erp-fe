@@ -2,8 +2,8 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { marksAPI, classesAPI, subjectsAPI } from '../../api'
 import { useAuth } from '../../contexts/AuthContext'
-import { SectionHeader, LoadingState, EmptyState, AttendanceRing } from '../../components/ui'
-import { BarChart3, ChevronDown } from 'lucide-react'
+import { SectionHeader, LoadingState, EmptyState } from '../../components/ui'
+import { BarChart3, ChevronDown, Layers } from 'lucide-react'
 import clsx from 'clsx'
 
 const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
@@ -21,6 +21,13 @@ export default function TeacherClassPerformance() {
     queryFn: () => classesAPI.getAll({ academicYear: currentYear, limit: 500 }),
   })
 
+  // Fetch full class details to get academic structure
+  const { data: classDetails } = useQuery({
+    queryKey: ['class-details', selectedClass],
+    queryFn: () => classesAPI.getById(selectedClass),
+    enabled: !!selectedClass,
+  })
+
   const { data: performance, isLoading } = useQuery({
     queryKey: ['class-performance', selectedClass, selectedQuarter, currentYear],
     queryFn: () => marksAPI.getClassPerformance(selectedClass, { academicYear: currentYear, quarter: selectedQuarter || undefined }),
@@ -35,26 +42,40 @@ export default function TeacherClassPerformance() {
 
   const getGradeStyle = (grade) => GRADE_COLORS[grade] || 'text-slate-400 bg-ink-700 border-white/10'
 
+  const structure = classDetails?.academicStructure
+  const activeExams = structure 
+    ? structure.terms.flatMap(t => t.exams.map(e => ({ ...e, termName: t.name })))
+    : QUARTERS.map(q => ({ name: q, code: q, termName: '' }))
+
   return (
     <div className="space-y-5">
       <SectionHeader title="Class Performance" subtitle="Subject-wise marks and grade analysis for your class" />
 
       <div className="card p-4 flex flex-col sm:flex-row gap-3">
-        <select className="input flex-1" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+        <select className="input flex-1" value={selectedClass} onChange={e => { setSelectedClass(e.target.value); setSelectedQuarter('') }}>
           <option value="">Select class...</option>
           {(classes?.classes || (Array.isArray(classes) ? classes : [])).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
         <div className="flex gap-2">
-          <button onClick={() => setSelectedQuarter('')}
-            className={clsx('px-3 py-2 rounded-lg text-xs border transition-all', !selectedQuarter ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10')}>
-            All
-          </button>
-          {QUARTERS.map(q => (
-            <button key={q} onClick={() => setSelectedQuarter(q)}
-              className={clsx('px-3 py-2 rounded-lg text-xs border transition-all', selectedQuarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10')}>
-              {q}
-            </button>
-          ))}
+          {!structure && (
+            <>
+              <button onClick={() => setSelectedQuarter('')}
+                className={clsx('px-3 py-2 rounded-lg text-xs border transition-all', !selectedQuarter ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10')}>
+                All
+              </button>
+              {QUARTERS.map(q => (
+                <button key={q} onClick={() => setSelectedQuarter(q)}
+                  className={clsx('px-3 py-2 rounded-lg text-xs border transition-all', selectedQuarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10')}>
+                  {q}
+                </button>
+              ))}
+            </>
+          )}
+          {structure && (
+            <div className="flex items-center gap-2 text-xs text-slate-500 italic bg-white/2 px-3 py-2 rounded-lg border border-white/5">
+              <Layers className="w-3.5 h-3.5" /> Using structure: {structure.name}
+            </div>
+          )}
         </div>
       </div>
 
@@ -65,7 +86,7 @@ export default function TeacherClassPerformance() {
       ) : (
         <div className="space-y-3">
           {/* Summary stats */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="card p-4 text-center">
               <p className="font-display text-2xl font-bold text-white">{performance.length}</p>
               <p className="text-xs text-slate-500 mt-1">Students</p>
@@ -102,10 +123,8 @@ export default function TeacherClassPerformance() {
                     onClick={() => setExpandedStudent(prev => prev === studentData.student?._id ? null : studentData.student?._id)}
                     className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/3 transition-colors text-left"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-ink-700 border border-white/5 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-slate-300">
-                        {studentData.student?.firstName?.[0]}{studentData.student?.lastName?.[0]}
-                      </span>
+                    <div className="w-10 h-10 rounded-xl bg-ink-700 border border-white/5 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs">
+                      {studentData.student?.firstName?.[0]}{studentData.student?.lastName?.[0]}
                     </div>
                     <div className="flex-1">
                       <p className="text-white font-medium">{studentData.student?.firstName} {studentData.student?.lastName}</p>
@@ -125,31 +144,33 @@ export default function TeacherClassPerformance() {
 
                   {/* Expanded: subject breakdown */}
                   {expandedStudent === studentData.student?._id && (
-                    <div className="px-5 pb-4 bg-white/2 border-t border-white/5">
-                      <div className="grid gap-2 mt-3">
+                    <div className="px-5 pb-4 bg-white/2 border-t border-white/5 overflow-x-auto">
+                      <div className="min-w-[600px] grid gap-2 mt-3">
                         {Object.entries(studentData.subjects || {}).map(([subId, subData]) => {
                           const pct = subData.max > 0 ? Math.round((subData.total / subData.max) * 100) : 0
                           const grade = pct >= 90 ? 'A+' : pct >= 80 ? 'A' : pct >= 70 ? 'B' : pct >= 60 ? 'C' : pct >= 40 ? 'D' : 'F'
                           return (
-                            <div key={subId} className="flex items-center gap-4 bg-ink-700 rounded-lg px-4 py-3">
-                              <div className="flex-1">
-                                <p className="text-white text-sm font-medium">{subData.subject?.name}</p>
+                            <div key={subId} className="flex items-center gap-4 bg-ink-700 rounded-lg px-4 py-3 border border-white/5">
+                              <div className="w-48 flex-shrink-0">
+                                <p className="text-white text-sm font-medium truncate">{subData.subject?.name}</p>
                                 <p className="text-xs text-slate-500">{subData.subject?.code}</p>
                               </div>
-                              <div className="flex items-center gap-3 text-sm">
-                                {QUARTERS.map(q => (
-                                  <div key={q} className="text-center min-w-[40px]">
-                                    <p className="text-slate-500 text-xs">{q}</p>
-                                    <p className={clsx('font-mono font-bold', subData.quarters?.[q] !== undefined ? 'text-white' : 'text-slate-600')}>
-                                      {subData.quarters?.[q] ?? '—'}
+                              <div className="flex-1 flex items-center justify-around gap-2 text-sm">
+                                {activeExams.map(exam => (
+                                  <div key={exam.code} className="text-center min-w-[50px]">
+                                    <p className="text-slate-500 text-[10px] uppercase font-bold">{exam.code}</p>
+                                    <p className={clsx('font-mono font-bold text-sm', (subData.exams?.[exam.code] !== undefined || subData.quarters?.[exam.code] !== undefined) ? 'text-white' : 'text-slate-700')}>
+                                      {subData.exams?.[exam.code] ?? subData.quarters?.[exam.code] ?? '—'}
                                     </p>
                                   </div>
                                 ))}
-                                <div className="text-center min-w-[60px] border-l border-white/5 pl-3">
-                                  <p className="text-slate-500 text-xs">Total</p>
-                                  <p className="font-mono font-bold text-white">{subData.total}/{subData.max}</p>
+                                <div className="text-center min-w-[70px] border-l border-white/10 pl-3">
+                                  <p className="text-slate-500 text-[10px] uppercase font-bold">Total</p>
+                                  <p className="font-mono font-bold text-white text-sm">{subData.total}/{subData.max}</p>
                                 </div>
-                                <span className={clsx('text-xs px-2 py-0.5 rounded-full border font-bold', getGradeStyle(grade))}>{grade}</span>
+                                <div className={clsx('min-w-[40px] text-center text-xs px-2 py-0.5 rounded-full border font-bold', getGradeStyle(grade))}>
+                                  {grade}
+                                </div>
                               </div>
                             </div>
                           )

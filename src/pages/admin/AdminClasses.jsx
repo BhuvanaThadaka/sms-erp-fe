@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { classesAPI, usersAPI } from '../../api'
+import { classesAPI, usersAPI, academicStructureAPI } from '../../api'
 import { SectionHeader, LoadingState, EmptyState, Modal, Field, Table, Pagination } from '../../components/ui'
 import { BookOpen, Plus, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -15,13 +15,13 @@ export default function AdminClasses() {
   const [showAssign, setShowAssign] = useState(null)
   const [page, setPage] = useState(1)
   const limit = 10
-  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
+  const [form, setForm] = useState({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35, academicStructure: '' })
   const [classErrors, setClassErrors] = useState({})
   const [assignTeacherId, setAssignTeacherId] = useState('')
   const [showDelete, setShowDelete] = useState(null)
 
   const resetClassForm = () => {
-    setForm({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35 })
+    setForm({ name: '', grade: '', section: '', academicYear: '2026-2027', room: '', maxStudents: 35, academicStructure: '' })
     setClassErrors({})
   }
 
@@ -49,6 +49,11 @@ export default function AdminClasses() {
   const { data: teachers } = useQuery({
     queryKey: ['teachers'],
     queryFn: () => usersAPI.getAll({ role: 'TEACHER' }),
+  })
+
+  const { data: structures } = useQuery({
+    queryKey: ['academic-structures'],
+    queryFn: () => academicStructureAPI.getAll(),
   })
 
   const createMutation = useMutation({
@@ -86,7 +91,7 @@ export default function AdminClasses() {
         {isLoading ? <LoadingState /> : (
           <>
             <Table
-              headers={['S.No', 'Class', 'Grade', 'Room', 'Class Teacher', 'Students Cap', 'Actions']}
+              headers={['S.No', 'Class', 'Room', 'Class Teacher', 'Structure', 'Students', 'Actions']}
               empty={!displayedClasses.length ? <EmptyState icon={BookOpen} title="No classes yet" /> : null}
             >
               {displayedClasses.map((cls, idx) => (
@@ -96,16 +101,18 @@ export default function AdminClasses() {
                     <p className="text-white font-medium">{cls.name}</p>
                     <p className="text-xs text-slate-500 font-mono">{cls.academicYear}</p>
                   </td>
-                  <td className="table-td">
-                    <span className="bg-azure-500/10 text-azure-400 border border-azure-500/20 text-xs px-2 py-0.5 rounded-full">
-                      Grade {cls.grade} — {cls.section}
-                    </span>
-                  </td>
                   <td className="table-td text-slate-400">{cls.room || '—'}</td>
                   <td className="table-td">
                     {cls.classTeacher ? (
                       <p className="text-sm text-white">{cls.classTeacher.firstName} {cls.classTeacher.lastName}</p>
                     ) : <span className="text-slate-600">Unassigned</span>}
+                  </td>
+                  <td className="table-td">
+                    {cls.academicStructure?.name ? (
+                      <span className="text-xs bg-ink-700 text-slate-300 border border-white/5 px-2 py-1 rounded">
+                        {cls.academicStructure.name}
+                      </span>
+                    ) : <span className="text-slate-600">—</span>}
                   </td>
                   <td className="table-td">
                     <span className="font-mono text-slate-400">{cls.maxStudents}</span>
@@ -165,6 +172,14 @@ export default function AdminClasses() {
           </div>
           <Field label="Academic Year" required error={classErrors.academicYear}>
             <input className={clsx('input', classErrors.academicYear && 'border-rose-500/50')} value={form.academicYear} onChange={e => { setForm(p => ({ ...p, academicYear: e.target.value })); setClassErrors(p => ({...p, academicYear: undefined})) }} />
+          </Field>
+          <Field label="Academic Structure (Dynamic Marks Entry)">
+            <select className="input" value={form.academicStructure} onChange={e => setForm(p => ({ ...p, academicStructure: e.target.value }))}>
+              <option value="">No special structure (Legacy Q1-Q4)</option>
+              {structures?.map(s => (
+                <option key={s._id} value={s._id}>{s.name} ({s.terms.length} Terms)</option>
+              ))}
+            </select>
           </Field>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={createMutation.isPending} className="btn-primary flex-1 justify-center">

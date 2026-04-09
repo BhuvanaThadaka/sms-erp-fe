@@ -26,7 +26,7 @@ export default function TeacherAttendance() {
 
   const { data: classes } = useQuery({
     queryKey: ['classes', 'my'],
-    queryFn: () => classesAPI.getAll({ academicYear: currentYear, isClassTeacher: 'true' }),
+    queryFn: () => classesAPI.getAll({ academicYear: currentYear, isClassTeacher: 'false' }),
   })
 
   const { data: students, isLoading: loadingStudents } = useQuery({

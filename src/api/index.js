@@ -165,6 +165,26 @@ export const assignmentAPI = {
   bulkAssign: (studentIds, classId) => api.post('/users/bulk-assign-class', { studentIds, classId }),
 }
 
+// ─── Assignments Module ────────────────────────────────
+export const assignmentsAPI = {
+  create: (data) => api.post('/assignments', data),
+  getTeacherAssignments: () => api.get('/assignments/teacher'),
+  getByClass: (classId) => api.get(`/assignments/class/${classId}`),
+  getSubmissions: (assignmentId) => api.get(`/assignments/${assignmentId}/submissions`),
+  submit: (data) => api.post('/assignments/submit', data),
+  getStudentSubmissions: () => api.get('/assignments/student/my-submissions'),
+  reviewSubmission: (id, data) => api.patch(`/assignments/submissions/${id}/review`, data),
+  runAIReview: (id) => api.post(`/assignments/submissions/${id}/ai-review`),
+  getDownloadUrl: (filename) => `/api/v1/assignments/download/${filename}`,
+  upload: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/assignments/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+}
+
 // ─── Notifications ─────────────────────────────────────
 export const notificationsAPI = {
   getAll: () => api.get('/notifications'),

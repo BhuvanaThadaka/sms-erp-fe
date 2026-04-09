@@ -24,12 +24,15 @@ import TeacherMarksEntry from './pages/teacher/TeacherMarksEntry'
 import TeacherClassPerformance from './pages/teacher/TeacherClassPerformance'
 import TeacherAcademicReports from './pages/teacher/TeacherAcademicReports'
 import TeacherAttendanceAnalysis from './pages/teacher/TeacherAttendanceAnalysis'
+import TeacherAssignments from './pages/teacher/TeacherAssignments'
+import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentAttendance from './pages/student/StudentAttendance'
 import StudentNotes from './pages/student/StudentNotes'
 import StudentSchedule from './pages/student/StudentSchedule'
 import StudentReports from './pages/student/StudentReports'
 import StudentReportCard from './pages/student/StudentReportCard'
+import StudentAssignments from './pages/student/StudentAssignments'
 import Profile from './pages/shared/Profile'
 import EventsPage from './pages/EventsPage'
 import ProfilePage from './pages/ProfilePage'
@@ -81,15 +84,18 @@ function AppRoutes() {
         <Route path="teacher/sessions" element={<PrivateRoute roles={['TEACHER']}><TeacherSessions /></PrivateRoute>} />
         <Route path="teacher/schedule" element={<PrivateRoute roles={['TEACHER']}><TeacherSchedule /></PrivateRoute>} />
         <Route path="teacher/reports" element={<PrivateRoute roles={['TEACHER']}><TeacherReports /></PrivateRoute>} />
-        <Route path="teacher/academic-reports" element={<PrivateRoute roles={['TEACHER']}><TeacherAcademicReports /></PrivateRoute>} />
-
-        {/* Student */}
-        <Route path="student" element={<PrivateRoute roles={['STUDENT']}><StudentDashboard /></PrivateRoute>} />
-        <Route path="student/report-card" element={<PrivateRoute roles={['STUDENT']}><StudentReportCard /></PrivateRoute>} />
-        <Route path="student/attendance" element={<PrivateRoute roles={['STUDENT']}><StudentAttendance /></PrivateRoute>} />
-        <Route path="student/notes" element={<PrivateRoute roles={['STUDENT']}><StudentNotes /></PrivateRoute>} />
-        <Route path="student/schedule" element={<PrivateRoute roles={['STUDENT']}><StudentSchedule /></PrivateRoute>} />
-        <Route path="student/reports" element={<PrivateRoute roles={['STUDENT']}><StudentReports /></PrivateRoute>} />
+         <Route path="teacher/academic-reports" element={<PrivateRoute roles={['TEACHER']}><TeacherAcademicReports /></PrivateRoute>} />
+         <Route path="teacher/assignments" element={<PrivateRoute roles={['TEACHER']}><TeacherAssignments /></PrivateRoute>} />
+         <Route path="teacher/assignments/:id/submissions" element={<PrivateRoute roles={['TEACHER']}><TeacherSubmissions /></PrivateRoute>} />
+ 
+         {/* Student */}
+         <Route path="student" element={<PrivateRoute roles={['STUDENT']}><StudentDashboard /></PrivateRoute>} />
+         <Route path="student/report-card" element={<PrivateRoute roles={['STUDENT']}><StudentReportCard /></PrivateRoute>} />
+         <Route path="student/attendance" element={<PrivateRoute roles={['STUDENT']}><StudentAttendance /></PrivateRoute>} />
+         <Route path="student/notes" element={<PrivateRoute roles={['STUDENT']}><StudentNotes /></PrivateRoute>} />
+         <Route path="student/schedule" element={<PrivateRoute roles={['STUDENT']}><StudentSchedule /></PrivateRoute>} />
+         <Route path="student/reports" element={<PrivateRoute roles={['STUDENT']}><StudentReports /></PrivateRoute>} />
+         <Route path="student/assignments" element={<PrivateRoute roles={['STUDENT']}><StudentAssignments /></PrivateRoute>} />
 
         {/* Shared */}
         <Route path="events" element={<PrivateRoute><EventsPage /></PrivateRoute>} />

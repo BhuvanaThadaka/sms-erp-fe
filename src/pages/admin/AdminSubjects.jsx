@@ -69,7 +69,7 @@ export default function AdminSubjects() {
 
   const deleteMutation = useMutation({
     mutationFn: subjectsAPI.delete,
-    onSuccess: () => { toast.success('Subject deactivated'); qc.invalidateQueries({ queryKey: ['subjects'] }) },
+    onSuccess: () => { toast.success('Subject deleted'); qc.invalidateQueries({ queryKey: ['subjects'] }) },
   })
 
   const resetForm = () => {
@@ -294,7 +294,7 @@ export default function AdminSubjects() {
               onClick={() => { deleteMutation.mutate(showDelete._id); setShowDelete(null); }}
               className="btn-primary flex-1 justify-center bg-rose-500 hover:bg-rose-600 border-rose-500 text-white disabled:opacity-50"
             >
-              {deleteMutation.isPending ? 'Deactivating...' : 'Deactivate'}
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </button>
             <button onClick={() => setShowDelete(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
           </div>

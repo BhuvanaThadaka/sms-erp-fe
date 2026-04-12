@@ -7,7 +7,8 @@ export default function NotificationDropdown({
   notifications, 
   onClose, 
   onMarkAsRead, 
-  onMarkAllAsRead
+  onMarkAllAsRead,
+  onNotificationClick
 }) {
   const dropdownRef = useRef(null)
 
@@ -69,7 +70,11 @@ export default function NotificationDropdown({
               return (
                 <div 
                   key={notif._id}
-                  onClick={() => !notif.isRead && onMarkAsRead(notif._id)}
+                  onClick={() => {
+                    if (!notif.isRead) onMarkAsRead(notif._id)
+                    onNotificationClick(notif)
+                    onClose()
+                  }}
                   className={clsx(
                     'p-4 hover:bg-white/5 transition-colors cursor-pointer relative group',
                     !notif.isRead && 'bg-azure-500/5'

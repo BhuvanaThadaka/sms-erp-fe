@@ -229,6 +229,11 @@ export default function Layout() {
                 onClose={() => setShowNotifications(false)}
                 onMarkAsRead={markAsRead}
                 onMarkAllAsRead={markAllAsRead}
+                onNotificationClick={(notif) => {
+                  if (notif.type === 'EVENT_CREATED' || notif.type === 'SESSION_CREATED' || notif.type === 'SCHEDULE_CREATED') {
+                    navigate('/events')
+                  }
+                }}
               />
             )}
           </div>

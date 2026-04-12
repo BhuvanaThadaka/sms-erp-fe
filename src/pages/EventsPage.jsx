@@ -3,12 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { eventsAPI, classesAPI } from '../api'
 import { useAuth } from '../contexts/AuthContext'
 import { SectionHeader, LoadingState, EmptyState, Modal, Field, Badge, Pagination } from '../components/ui'
-import { Calendar, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight, MapPin, Clock, Users, BookOpen, Info, Trash2 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const EVENT_ICONS = { EXAM: '📝', HOLIDAY: '🏖️', MEETING: '🤝', ACTIVITY: '🎭', SPECIAL: '⭐' }
+const TYPE_CONFIG = {
+  EXAM: { bg: 'bg-rose-500/10', border: 'border-rose-500/20', accent: 'text-rose-400', icon: BookOpen },
+  HOLIDAY: { bg: 'bg-jade-500/10', border: 'border-jade-500/20', accent: 'text-jade-400', icon: CalendarIcon },
+  MEETING: { bg: 'bg-azure-500/10', border: 'border-azure-500/20', accent: 'text-azure-400', icon: Users },
+  ACTIVITY: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', accent: 'text-amber-400', icon: Info },
+  SPECIAL: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', accent: 'text-amber-400', icon: Info }
+}
 
 export default function EventsPage() {
   const { user } = useAuth()
@@ -20,6 +27,7 @@ export default function EventsPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [showCreate, setShowCreate] = useState(false)
   const [showDelete, setShowDelete] = useState(null)
+  const [showView, setShowView] = useState(null)
   const [typeFilter, setTypeFilter] = useState('')
   const [page, setPage] = useState(1)
   const limit = 10
@@ -95,9 +103,6 @@ export default function EventsPage() {
   })
 
   const EVENT_TYPES = ['EXAM','HOLIDAY','MEETING','ACTIVITY','SPECIAL']
-  const TYPE_COLORS = {
-    EXAM: 'rose', HOLIDAY: 'jade', MEETING: 'azure', ACTIVITY: 'amber', SPECIAL: 'amber'
-  }
 
   return (
     <div className="space-y-5">
@@ -113,7 +118,6 @@ export default function EventsPage() {
         )}
       </div>
 
-      {/* Month navigation */}
       <div className="card p-4 flex items-center justify-between">
         <button onClick={() => { setCurrentMonth(m => subMonths(m, 1)); setPage(1) }} className="btn-secondary p-2">
           <ChevronLeft className="w-4 h-4" />
@@ -126,7 +130,6 @@ export default function EventsPage() {
         </button>
       </div>
 
-      {/* Type filters */}
       <div className="flex gap-2 flex-wrap">
         {['', ...EVENT_TYPES].map(t => (
           <button
@@ -145,44 +148,48 @@ export default function EventsPage() {
       </div>
 
       {isLoading ? <LoadingState /> : !displayedEvents?.length ? (
-        <EmptyState icon={Calendar} title="No events this month" description="No events scheduled for this period" />
+        <EmptyState icon={CalendarIcon} title="No events this month" description="No events scheduled for this period" />
       ) : (
         <div className="space-y-4">
           <div className="space-y-3">
             {displayedEvents.map(event => {
-              const color = TYPE_COLORS[event.type] || 'azure'
+              const config = TYPE_CONFIG[event.type] || { accent: 'text-slate-400' }
               return (
-                <div key={event._id} className={`card card-hover p-5 border-l-2 border-l-${color}-500/50`}>
-                  <div className="flex items-start gap-4">
-                    <div className="text-2xl flex-shrink-0">{EVENT_ICONS[event.type]}</div>
+                <div 
+                  key={event._id}
+                  onClick={() => setShowView(event)}
+                  className="bg-ink-800/80 border border-white/5 p-4 rounded-xl hover:border-azure-500/30 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-white font-semibold font-display">{event.title}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge status={event.type} />
-                            {event.isAllClasses && (
-                              <span className="text-xs text-slate-500 bg-ink-700 px-1.5 py-0.5 rounded">All Classes</span>
-                            )}
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={clsx('w-2 h-2 rounded-full', config.accent)} />
+                        <h3 className="text-sm font-bold text-white truncate group-hover:text-azure-400 transition-colors">{event.title}</h3>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(event.startDate), 'MMM d, yyyy')}
+                        </div>
+                        {event.venue && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {event.venue}
                           </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-sm font-medium text-white font-mono">
-                            {format(new Date(event.startDate), 'MMM d')}
-                            {event.startDate !== event.endDate && ` – ${format(new Date(event.endDate), 'MMM d')}`}
-                          </p>
-                          {event.venue && <p className="text-xs text-slate-500 mt-0.5">{event.venue}</p>}
-                        </div>
+                        )}
                       </div>
                       {event.description && (
-                        <p className="text-sm text-slate-400 mt-2 line-clamp-2">{event.description}</p>
+                        <p className="text-xs text-slate-500 mt-2 line-clamp-2">{event.description}</p>
                       )}
                     </div>
-                    {isAdmin && (
-                      <button
-                        onClick={() => setShowDelete(event)}
-                        className="text-slate-600 hover:text-rose-400 transition-colors text-lg leading-none flex-shrink-0"
-                      >×</button>
+                    {canCreate && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setShowDelete(event) }}
+                        className="p-1 px-1.5 text-[10px] text-slate-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete Event"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -200,7 +207,6 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Create Modal */}
       <Modal open={showCreate} onClose={() => { setShowCreate(false); resetEventForm() }} title="Create Event" size="lg">
         <form onSubmit={(e) => { e.preventDefault(); if (!validateEvent()) return; createMutation.mutate(form) }} className="space-y-4" noValidate>
           <Field label="Title" required error={eventErrors.title}>
@@ -255,6 +261,96 @@ export default function EventsPage() {
             <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={!!showView} onClose={() => setShowView(null)} title="Event Details" size="md">
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className={clsx(
+              'w-12 h-12 rounded-xl flex items-center justify-center border',
+              TYPE_CONFIG[showView?.type]?.bg || 'bg-slate-500/10',
+              TYPE_CONFIG[showView?.type]?.border || 'border-slate-500/20'
+            )}>
+              {(() => {
+                const Icon = TYPE_CONFIG[showView?.type]?.icon || Info
+                return <Icon className={clsx('w-6 h-6', TYPE_CONFIG[showView?.type]?.accent || 'text-slate-400')} />
+              })()}
+            </div>
+            <div>
+              <p className="text-xs font-mono text-slate-500 uppercase tracking-wider">{showView?.type}</p>
+              <h2 className="text-xl font-bold text-white">{showView?.title}</h2>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-slate-500 uppercase">Commencement</p>
+              <div className="flex items-center gap-2 text-slate-200">
+                <Clock className="w-4 h-4 text-azure-400" />
+                <span className="text-sm font-medium">{showView?.startDate && format(new Date(showView.startDate), 'MMM d, yyyy')}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-slate-500 uppercase">Conclusion</p>
+              <div className="flex items-center gap-2 text-slate-200">
+                <Clock className="w-4 h-4 text-rose-400" />
+                <span className="text-sm font-medium">{showView?.endDate && format(new Date(showView.endDate), 'MMM d, yyyy')}</span>
+              </div>
+            </div>
+          </div>
+
+          {showView?.venue && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-slate-500 uppercase">Venue</p>
+              <div className="flex items-center gap-2 text-slate-200">
+                <MapPin className="w-4 h-4 text-jade-400" />
+                <span className="text-sm font-medium">{showView.venue}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-slate-500 uppercase">Description</p>
+            <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{showView?.description || 'No description provided.'}</p>
+            </div>
+          </div>
+
+          {!showView?.isAllClasses && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-medium text-slate-500 uppercase">Target Classes</p>
+              <div className="flex flex-wrap gap-2 text-white">
+                {showView?.applicableClasses?.map(c => {
+                  const classId = typeof c === 'string' ? c : c._id;
+                  const classData = typeof c === 'object' && c.grade ? c : 
+                                   (Array.isArray(classes) ? classes : classes?.classes || []).find(cl => cl._id === classId);
+                  
+                  return (
+                    <span key={classId} className="text-[10px] bg-ink-700 text-slate-300 border border-white/10 px-2 py-1 rounded-full flex items-center gap-1.5">
+                      <Users className="w-3 h-3 text-azure-400" />
+                      {classData ? `${classData.grade} ${classData.section} ${classData.name ? `- ${classData.name}` : ''}` : `Class ID: ${classId}`}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4 border-t border-white/5">
+            <button onClick={() => setShowView(null)} className="btn-secondary flex-1 justify-center">Close</button>
+            {canCreate && (
+              <button 
+                onClick={() => {
+                  setShowDelete(showView);
+                  setShowView(null);
+                }}
+                className="btn-primary bg-rose-500 hover:bg-rose-600 border-rose-500 text-white"
+              >
+                Delete Event
+              </button>
+            )}
+          </div>
+        </div>
       </Modal>
 
       {/* Delete Confirmation Modal */}

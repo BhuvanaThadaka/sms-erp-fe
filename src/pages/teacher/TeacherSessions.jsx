@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sessionsAPI, classesAPI, notesAPI } from '../../api'
 import { useAuth } from '../../contexts/AuthContext'
 import { SectionHeader, LoadingState, EmptyState, Modal, Field, Table } from '../../components/ui'
-import { BookMarked, Plus, Upload, Clock, FileText } from 'lucide-react'
+import { BookMarked, Plus, Upload, Clock, FileText, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -33,6 +33,11 @@ export default function TeacherSessions() {
     queryFn: () => classesAPI.getAll({ academicYear: currentYear }),
   })
 
+  const { data: notes } = useQuery({
+    queryKey: ['notes', 'teacher'],
+    queryFn: () => notesAPI.getMyNotes(),
+  })
+
   const createSession = useMutation({
     mutationFn: sessionsAPI.create,
     onSuccess: () => { toast.success('Session created!'); qc.invalidateQueries({ queryKey: ['sessions'] }); setShowCreate(false); resetForm() },
@@ -40,7 +45,11 @@ export default function TeacherSessions() {
 
   const uploadNote = useMutation({
     mutationFn: notesAPI.create,
-    onSuccess: () => { toast.success('Note uploaded!'); setShowNote(null) },
+    onSuccess: () => { 
+      toast.success('Note uploaded!'); 
+      qc.invalidateQueries({ queryKey: ['notes', 'teacher'] });
+      setShowNote(null) 
+    },
   })
 
   const resetForm = () => {
@@ -113,6 +122,30 @@ export default function TeacherSessions() {
                       ))}
                     </div>
                   )}
+
+                  {/* Notes List */}
+                  {notes && notes.filter(n => (n.sessionId?._id || n.sessionId) === s._id).length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                      <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2">Attached Notes</p>
+                      <div className="flex flex-wrap gap-2">
+                        {notes.filter(n => (n.sessionId?._id || n.sessionId) === s._id).map(n => (
+                          <a 
+                            key={n._id}
+                            href={notesAPI.getDownloadUrl(n.fileName)}
+                            download={n.fileName}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-azure-500/5 hover:bg-azure-500/10 border border-azure-500/10 hover:border-azure-500/20 rounded-lg text-xs text-azure-400 transition-all group"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span className="truncate max-w-[120px]">{n.title}</span>
+                            <Download className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <p className="text-xs text-slate-600 mt-3">{format(new Date(s.sessionDate), 'MMMM d, yyyy')}</p>
                 </div>
               </div>
@@ -209,13 +242,22 @@ export default function TeacherSessions() {
                 onChange={(e) => {
                   const file = e.target.files?.[0]
                   if (file) {
-                    setNoteForm(p => ({ 
-                      ...p, 
-                      fileName: file.name, 
-                      fileUrl: `https://simulated-storage.com/${file.name}`,
-                      title: p.title || file.name.split('.')[0]
-                    }))
                     setErrors(p => ({ ...p, file: undefined }))
+                    const toastId = toast.loading('Uploading file...')
+                    notesAPI.upload(file)
+                      .then(res => {
+                        setNoteForm(p => ({ 
+                          ...p, 
+                          fileName: res.fileName, 
+                          fileUrl: res.url,
+                          title: p.title || file.name.split('.')[0]
+                        }))
+                        toast.success('File uploaded successfully!', { id: toastId })
+                      })
+                      .catch(err => {
+                        toast.error('File upload failed. Please try again.', { id: toastId })
+                        console.error('Upload error:', err)
+                      })
                   }
                 }}
               />

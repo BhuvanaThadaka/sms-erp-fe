@@ -27,7 +27,7 @@ export default function EventsPage() {
     title: '', description: '', type: 'EXAM',
     startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
-    isAllClasses: true, venue: '', academicYear: '2024-2025', applicableClasses: []
+    isAllClasses: true, venue: '', academicYear: '2026-2027', applicableClasses: []
   })
   const [eventErrors, setEventErrors] = useState({})
 
@@ -36,7 +36,7 @@ export default function EventsPage() {
       title: '', description: '', type: 'EXAM',
       startDate: format(new Date(), 'yyyy-MM-dd'),
       endDate: format(new Date(), 'yyyy-MM-dd'),
-      isAllClasses: true, venue: '', academicYear: '2024-2025', applicableClasses: []
+      isAllClasses: true, venue: '', academicYear: '2026-2027', applicableClasses: []
     })
     setEventErrors({})
   }
@@ -60,7 +60,8 @@ export default function EventsPage() {
       startDate, 
       endDate, 
       type: typeFilter || undefined,
-      academicYear: '2024-2025',
+      classId: user?.role === 'STUDENT' ? (user?.classId?._id || user?.classId) : undefined,
+      academicYear: '2026-2027',
       page,
       limit
     }),
@@ -79,7 +80,7 @@ export default function EventsPage() {
 
   const { data: classes } = useQuery({
     queryKey: ['classes'],
-    queryFn: () => classesAPI.getAll({ academicYear: '2024-2025' }),
+    queryFn: () => classesAPI.getAll({ academicYear: '2026-2027' }),
     enabled: canCreate,
   })
 
@@ -230,15 +231,23 @@ export default function EventsPage() {
             <input type="checkbox" id="allClasses" checked={form.isAllClasses} onChange={e => setForm(p => ({ ...p, isAllClasses: e.target.checked }))} className="w-4 h-4 rounded" />
             <label htmlFor="allClasses" className="text-sm text-slate-300">Apply to all classes</label>
           </div>
-          {!form.isAllClasses && (
-            <Field label="Applicable Classes">
-              <select multiple className="input min-h-[80px]"
-                onChange={e => setForm(p => ({ ...p, applicableClasses: Array.from(e.target.selectedOptions, o => o.value) }))}
-              >
-                {(classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-              </select>
-            </Field>
-          )}
+          
+          <Field label="Applicable Classes">
+            <select 
+              multiple 
+              className={clsx('input min-h-[80px]', form.isAllClasses && 'opacity-50 cursor-not-allowed')}
+              disabled={form.isAllClasses}
+              value={form.applicableClasses}
+              onChange={e => setForm(p => ({ ...p, applicableClasses: Array.from(e.target.selectedOptions, o => o.value) }))}
+            >
+              {(Array.isArray(classes) ? classes : classes?.classes || []).map(c => (
+                <option key={c._id} value={c._id}>
+                  {c.grade} {c.section} {c.name ? `- ${c.name}` : ''}
+                </option>
+              ))}
+            </select>
+            {form.isAllClasses && <p className="text-[10px] text-slate-500 mt-1">This event will be visible to all students in all classes.</p>}
+          </Field>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={createMutation.isPending} className="btn-primary flex-1 justify-center">
               {createMutation.isPending ? 'Creating...' : 'Create Event'}

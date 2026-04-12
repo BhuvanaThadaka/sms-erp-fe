@@ -57,7 +57,7 @@ export default function StudentNotes() {
                 <p className="text-xs text-slate-600">{note.uploadedBy?.firstName} {note.uploadedBy?.lastName}</p>
                 <p className="text-xs text-slate-600">{format(new Date(note.createdAt), 'MMM d')}</p>
               </div>
-              <a href={note.fileUrl} target="_blank" rel="noopener noreferrer"
+              <a href={notesAPI.getDownloadUrl(note.fileName)} download={note.fileName} target="_blank" rel="noopener noreferrer"
                 className="mt-3 flex items-center gap-2 btn-secondary text-xs py-1.5 w-full justify-center"
               >
                 <Download className="w-3 h-3" /> {note.fileName}

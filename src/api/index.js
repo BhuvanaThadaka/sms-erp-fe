@@ -85,8 +85,17 @@ export const sessionsAPI = {
 // ─── Notes ─────────────────────────────────────────────
 export const notesAPI = {
   getByClass: (classId, params) => api.get(`/notes/class/${classId}`, { params }),
+  getMyNotes: () => api.get('/notes/my-notes'),
   create: (data) => api.post('/notes', data),
   delete: (id) => api.delete(`/notes/${id}`),
+  upload: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/notes/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  getDownloadUrl: (filename) => `/api/v1/notes/download/${filename}`,
 }
 
 // ─── Schedule ──────────────────────────────────────────

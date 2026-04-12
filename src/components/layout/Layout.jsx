@@ -42,7 +42,7 @@ const NAV = {
     { to: '/student/attendance', label: 'Attendance', icon: Activity },
     { to: '/student/notes', label: 'Notes', icon: FileText },
     { to: '/student/schedule', label: 'Schedule', icon: Clock },
-    { to: '/student/reports', label: 'Term Reports', icon: BookCopy },
+    // { to: '/student/reports', label: 'Term Reports', icon: BookCopy },
     { to: '/student/assignments', label: 'Assignments', icon: PenLine },
     { to: '/events', label: 'Events', icon: Calendar },
     // { to: '/profile', label: 'Profile', icon: User },

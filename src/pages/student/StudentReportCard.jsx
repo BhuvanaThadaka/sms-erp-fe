@@ -186,8 +186,10 @@ export default function StudentReportCard() {
             {academicReports.map(r => (
               <div key={r._id} className="bg-ink-700/50 rounded-xl p-4 border border-white/5 hover:border-white/10 transition-colors">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-display font-bold text-azure-400">{r.quarter}</span>
-                  <span className={clsx('text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase', GRADE_COLORS[r.overallGrade])}>{r.overallGrade}</span>
+                  <span className="font-display font-bold text-azure-400">{r.examCode || r.termName || r.quarter || 'Annual'}</span>
+                  <span className={clsx('text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase', 
+                    GRADE_COLORS[r.overallGrade]?.split(' ').find(c => c.startsWith('text-'))?.replace('text-', '') === r.overallGrade ? GRADE_COLORS[r.overallGrade] : GRADE_COLORS[r.overallGrade]
+                  )}>{r.overallGrade}</span>
                 </div>
                 <p className="text-white font-bold text-2xl font-display">{r.percentage}%</p>
                 <p className="text-[10px] text-slate-500 mb-4 uppercase tracking-wider">{r.totalObtained} / {r.totalMax} MARKS</p>

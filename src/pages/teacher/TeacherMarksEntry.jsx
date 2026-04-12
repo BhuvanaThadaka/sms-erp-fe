@@ -27,11 +27,11 @@ export default function TeacherMarksEntry() {
   const [selectedTerm, setSelectedTerm] = useState('')
   const [selectedExam, setSelectedExam] = useState('')
   const [marks, setMarks] = useState({}) // { studentId: { marks, remarks, isAbsent } }
-  const currentYear = '2024-2025'
+  const academicYear = classDetails?.academicYear || '2024-2025'
 
   const { data: mySubjects, isLoading: loadingSubjects } = useQuery({
     queryKey: ['my-subjects'],
-    queryFn: () => subjectsAPI.getMy({ academicYear: currentYear }),
+    queryFn: () => subjectsAPI.getMy(),
   })
 
   const currentSubject = mySubjects?.find(s => s._id === selectedSubject)
@@ -69,7 +69,7 @@ export default function TeacherMarksEntry() {
     queryKey: ['marks', selectedSubject, structure ? selectedExam : selectedQuarter, selectedTerm],
     queryFn: () => marksAPI.getAll({ 
       subjectId: selectedSubject, 
-      academicYear: currentYear,
+      academicYear,
       ...(structure ? { termName: selectedTerm, examCode: selectedExam } : { quarter: selectedQuarter })
     }),
     enabled: !!selectedSubject,
@@ -124,7 +124,7 @@ export default function TeacherMarksEntry() {
       classId,
       ...(structure ? { termName: selectedTerm, examCode: selectedExam } : { quarter: selectedQuarter }),
       maxMarks,
-      academicYear: currentYear,
+      academicYear,
       records,
     })
   }
@@ -163,7 +163,14 @@ export default function TeacherMarksEntry() {
             {structure ? (
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Term">
-                  <select className="input" value={selectedTerm} onChange={e => setSelectedTerm(e.target.value)}>
+                  <select className="input" value={selectedTerm} onChange={e => {
+                    const newTerm = e.target.value
+                    setSelectedTerm(newTerm)
+                    const termObj = structure.terms.find(t => t.name === newTerm)
+                    if (termObj?.exams?.length) {
+                      setSelectedExam(termObj.exams[0].code)
+                    }
+                  }}>
                     {structure.terms.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                   </select>
                 </Field>

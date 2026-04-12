@@ -8,7 +8,6 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
-const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
 const GRADE_COLORS = { 'A+': 'jade', A: 'jade', B: 'azure', C: 'amber', D: 'rose', F: 'rose' }
 
 export default function TeacherAcademicReports() {
@@ -16,20 +15,42 @@ export default function TeacherAcademicReports() {
   const qc = useQueryClient()
   const [classFilter, setClassFilter] = useState('')
   const [showGenerate, setShowGenerate] = useState(false)
+  const [showBulkModal, setShowBulkModal] = useState(false)
   const [showReport, setShowReport] = useState(null)
-  const [form, setForm] = useState({ studentId: '', classId: '', quarter: 'Q1', academicYear: '2024-2025', teacherRemarks: '' })
+  const [form, setForm] = useState({ 
+    studentId: '', 
+    classId: '', 
+    quarter: '', 
+    termName: '', 
+    examCode: '', 
+    academicYear: '2024-2025', 
+    teacherRemarks: '' 
+  })
+  const [bulkForm, setBulkForm] = useState({
+    classId: '',
+    termName: '',
+    examCode: '',
+    academicYear: '2024-2025'
+  })
   const [errors, setErrors] = useState({})
-  const currentYear = '2024-2025'
+  const currentDefaultYear = '2024-2025' // Fallback
 
   const { data: reports, isLoading } = useQuery({
-    queryKey: ['academic-reports', classFilter, currentYear],
-    queryFn: () => academicReportsAPI.getAll({ classId: classFilter || undefined, academicYear: currentYear }),
+    queryKey: ['academic-reports', classFilter],
+    queryFn: () => academicReportsAPI.getAll({ classId: classFilter || undefined }),
   })
 
   const { data: classes } = useQuery({
-    queryKey: ['classes'],
-    queryFn: () => classesAPI.getAll({ academicYear: currentYear }),
+    queryKey: ['classes', 'classTeacher'],
+    queryFn: () => classesAPI.getAll({ isClassTeacher: 'true' }),
   })
+
+  const classList = Array.isArray(classes) ? classes : classes?.classes || []
+  const singleClass = classList.find(c => c._id === form.classId)
+  const bulkClass = classList.find(c => c._id === bulkForm.classId)
+  
+  const singleStructure = singleClass?.academicStructure
+  const bulkStructure = bulkClass?.academicStructure
 
   const { data: students } = useQuery({
     queryKey: ['students', form.classId],
@@ -44,7 +65,15 @@ export default function TeacherAcademicReports() {
       qc.invalidateQueries({ queryKey: ['academic-reports'] })
       setShowGenerate(false)
       setErrors({})
-      setForm({ studentId: '', classId: '', quarter: 'Q1', academicYear: '2024-2025', teacherRemarks: '' })
+      setForm({ 
+        studentId: '', 
+        classId: '', 
+        quarter: '', 
+        termName: '', 
+        examCode: '', 
+        academicYear: '2024-2025', 
+        teacherRemarks: '' 
+      })
     },
   })
 
@@ -52,7 +81,7 @@ export default function TeacherAcademicReports() {
     const errs = {}
     if (!data.classId) errs.classId = 'Class is required.'
     if (!data.studentId) errs.studentId = 'Student is required.'
-    if (!data.quarter) errs.quarter = 'Quarter is required.'
+    // No specific period check needed if Annual is allowed (no selection = Annual)
     return errs
   }
 
@@ -72,19 +101,21 @@ export default function TeacherAcademicReports() {
         subtitle="Generate and view detailed academic performance reports"
         action={
           <div className="flex gap-2">
-            {classFilter && (
-              <button
-                onClick={() => {
-                  const q = prompt('Generate for which quarter? (Q1/Q2/Q3/Q4)', 'Q1')
-                  if (!q) return
-                  bulkMutation.mutate({ classId: classFilter, quarter: q, academicYear: currentYear })
-                }}
-                disabled={bulkMutation.isPending}
-                className="btn-secondary disabled:opacity-50"
-              >
-                <Users className="w-4 h-4" /> Bulk Generate
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (!classFilter) {
+                  toast.error('Please select a class first')
+                  return
+                }
+                const cls = classList.find(c => c._id === classFilter)
+                setBulkForm(p => ({ ...p, classId: classFilter, academicYear: cls?.academicYear || currentDefaultYear }))
+                setShowBulkModal(true)
+              }}
+              disabled={bulkMutation.isPending}
+              className="btn-secondary disabled:opacity-50"
+            >
+              <Users className="w-4 h-4" /> Bulk Generate
+            </button>
             <button onClick={() => setShowGenerate(true)} className="btn-primary">
               <Plus className="w-4 h-4" /> Generate Report
             </button>
@@ -115,9 +146,13 @@ export default function TeacherAcademicReports() {
                   </div>
                   <AttendanceRing percentage={r.percentage} size={56} />
                 </div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-azure-500/10 text-azure-400 border border-azure-500/20 text-xs px-2 py-0.5 rounded-full font-mono">{r.quarter}</span>
-                  <span className={`bg-${gc}-500/10 text-${gc}-400 border border-${gc}-500/20 text-xs px-2 py-0.5 rounded-full font-bold`}>{r.overallGrade}</span>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className="bg-azure-500/10 text-azure-400 border border-azure-500/20 text-[10px] uppercase px-2 py-0.5 rounded-md font-bold tracking-wider">
+                    {r.examCode || r.termName || 'Annual Report'}
+                  </span>
+                  <span className={`bg-${gc}-500/10 text-${gc}-400 border border-${gc}-500/20 text-[10px] uppercase px-2 py-0.5 rounded-md font-bold tracking-wider`}>
+                    Grade {r.overallGrade}
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 gap-1 mb-3">
                   <div className="bg-ink-700 rounded-lg py-1.5 text-center">
@@ -152,11 +187,19 @@ export default function TeacherAcademicReports() {
             setErrors(errs)
             return
           }
-          generateMutation.mutate(form) 
+          const cleanData = Object.fromEntries(
+            Object.entries(form).filter(([_, v]) => v !== '')
+          )
+          generateMutation.mutate(cleanData) 
         }} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Class" required error={errors.classId}>
-              <select className={clsx('input', errors.classId && 'border-rose-500/50')} value={form.classId} onChange={e => { setForm(p => ({ ...p, classId: e.target.value, studentId: '' })); setErrors(p => ({ ...p, classId: undefined })) }} required>
+              <select className={clsx('input', errors.classId && 'border-rose-500/50')} value={form.classId} onChange={e => { 
+                const cid = e.target.value
+                const cls = (Array.isArray(classes) ? classes : classes?.classes || []).find(c => c._id === cid)
+                setForm(p => ({ ...p, classId: cid, studentId: '', academicYear: cls?.academicYear || '2024-2025' }))
+                setErrors(p => ({ ...p, classId: undefined })) 
+              }} required>
                 <option value="">Select class...</option>
                 {(Array.isArray(classes) ? classes : classes?.classes || []).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
@@ -168,17 +211,61 @@ export default function TeacherAcademicReports() {
               </select>
             </Field>
           </div>
-          <Field label="Quarter" required error={errors.quarter}>
-            <div className="flex gap-2">
-              {QUARTERS.map(q => (
-                <button key={q} type="button" onClick={() => { setForm(p => ({ ...p, quarter: q })); setErrors(p => ({ ...p, quarter: undefined })) }}
-                  className={clsx('flex-1 py-2 rounded-lg text-sm border transition-all',
-                    form.quarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10',
-                    errors.quarter && 'border-rose-500/50'
-                  )}>
-                  {q}
-                </button>
-              ))}
+          <Field label="Select Period" required error={errors.period}>
+            <div className="space-y-4">
+              {singleStructure ? (
+                <>
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500 uppercase tracking-widest">Aggregate Reports</p>
+                    <div className="flex gap-2">
+                      <button type="button" 
+                        onClick={() => {
+                          setForm(p => ({ ...p, termName: '', examCode: '', quarter: '' }))
+                          setErrors(p => ({ ...p, period: undefined }))
+                        }}
+                        className={clsx('flex-1 py-2 rounded-lg text-sm border transition-all',
+                          (!form.termName && !form.examCode && !form.quarter) ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10'
+                        )}>
+                        Annual (Full Year)
+                      </button>
+                    </div>
+                  </div>
+
+                  {singleStructure.terms?.map(term => (
+                    <div key={term.name} className="space-y-2">
+                      <p className="text-xs text-slate-500 uppercase tracking-widest">{term.name}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" 
+                          onClick={() => {
+                            setForm(p => ({ ...p, termName: term.name, examCode: '', quarter: '' }))
+                            setErrors(p => ({ ...p, period: undefined }))
+                          }}
+                          className={clsx('px-4 py-2 rounded-lg text-sm border transition-all',
+                            (form.termName === term.name && !form.examCode) ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10'
+                          )}>
+                          Consolidated {term.name}
+                        </button>
+                        {term.exams?.map(exam => (
+                          <button key={exam.code} type="button" 
+                            onClick={() => {
+                              setForm(p => ({ ...p, termName: term.name, examCode: exam.code, quarter: '' }))
+                              setErrors(p => ({ ...p, period: undefined }))
+                            }}
+                            className={clsx('px-4 py-2 rounded-lg text-sm border transition-all',
+                              (form.examCode === exam.code) ? 'bg-jade-600/20 text-jade-400 border-jade-500/30' : 'bg-ink-700 text-slate-400 border-white/10'
+                            )}>
+                            {exam.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg">
+                  <p className="text-xs text-amber-500">No academic structure linked to this class. Please contact admin.</p>
+                </div>
+              )}
             </div>
           </Field>
           <Field label="Teacher Remarks">
@@ -194,6 +281,61 @@ export default function TeacherAcademicReports() {
           </div>
         </form>
       </Modal>
+      
+      {/* Bulk Generate Modal */}
+      {showBulkModal && (
+        <Modal open={showBulkModal} onClose={() => setShowBulkModal(false)} title="Bulk Generate Reports">
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            const cleanBulkData = Object.fromEntries(
+              Object.entries(bulkForm).filter(([_, v]) => v !== '')
+            )
+            bulkMutation.mutate(cleanBulkData)
+            setShowBulkModal(false)
+          }} className="space-y-4">
+            <div className="bg-azure-500/5 border border-azure-500/20 rounded-xl p-4 mb-4">
+              <p className="text-sm text-azure-400">Generate reports for all students in the selected class for a specific term or exam.</p>
+            </div>
+
+            <Field label="Target Term">
+              <select 
+                className="input" 
+                value={bulkForm.termName} 
+                onChange={e => {
+                  setBulkForm(p => ({ ...p, termName: e.target.value, examCode: '' }))
+                }}
+              >
+                <option value="">Annual (Full Year)</option>
+                {bulkStructure?.terms?.map(t => (
+                  <option key={t.name} value={t.name}>{t.name}</option>
+                ))}
+              </select>
+            </Field>
+
+            {bulkForm.termName && (
+              <Field label="Specific Exam (Optional)">
+                <select 
+                  className="input" 
+                  value={bulkForm.examCode} 
+                  onChange={e => setBulkForm(p => ({ ...p, examCode: e.target.value }))}
+                >
+                  <option value="">Whole Term</option>
+                  {bulkStructure?.terms?.find(t => t.name === bulkForm.termName)?.exams.map(ex => (
+                    <option key={ex.code} value={ex.code}>{ex.name}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button type="button" onClick={() => setShowBulkModal(false)} className="btn-secondary">Cancel</button>
+              <button type="submit" className="btn-primary" disabled={bulkMutation.isPending}>
+                {bulkMutation.isPending ? 'Generating...' : 'Start Bulk Generation'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Report Detail Modal */}
       <Modal open={!!showReport} onClose={() => setShowReport(null)} title="Academic Report Detail" size="xl">
@@ -206,9 +348,10 @@ export default function TeacherAcademicReports() {
                 <p className="text-xs text-slate-500 font-mono mt-0.5">{showReport.studentId?.enrollmentNumber}</p>
               </div>
               <div className="bg-ink-700 rounded-xl p-4">
-                <p className="text-xs text-slate-500 mb-1">Class & Quarter</p>
                 <p className="text-white font-semibold">{showReport.classId?.name}</p>
-                <p className="text-xs text-azure-400 font-mono mt-0.5">{showReport.quarter} — {showReport.academicYear}</p>
+                <p className="text-xs text-azure-400 font-mono mt-0.5">
+                  {showReport.examCode || showReport.termName || 'Annual'} — {showReport.academicYear}
+                </p>
               </div>
               <div className="bg-ink-700 rounded-xl p-4 text-center">
                 <AttendanceRing percentage={showReport.percentage} size={72} />
@@ -238,11 +381,11 @@ export default function TeacherAcademicReports() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-3">
-                        {QUARTERS.map(q => (
-                          <div key={q} className={clsx('flex-1 text-center py-2 rounded-lg', s.quarters?.[q] ? 'bg-ink-800' : 'bg-ink-900 opacity-40')}>
-                            <p className="text-xs text-slate-500">{q}</p>
-                            <p className="font-mono font-bold text-white text-sm">{s.quarters?.[q]?.marksObtained ?? '—'}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(s.quarters || {}).map(([key, val]) => (
+                          <div key={key} className="flex-1 min-w-[80px] text-center py-2 rounded-lg bg-ink-800">
+                            <p className="text-[10px] text-slate-500 uppercase">{key}</p>
+                            <p className="font-mono font-bold text-white text-sm">{val.marksObtained ?? '—'}</p>
                           </div>
                         ))}
                       </div>

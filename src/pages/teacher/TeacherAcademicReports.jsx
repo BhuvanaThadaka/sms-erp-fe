@@ -8,7 +8,6 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
-const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
 const GRADE_COLORS = { 'A+': 'jade', A: 'jade', B: 'azure', C: 'amber', D: 'rose', F: 'rose' }
 
 export default function TeacherAcademicReports() {
@@ -17,9 +16,11 @@ export default function TeacherAcademicReports() {
   const [classFilter, setClassFilter] = useState('')
   const [showGenerate, setShowGenerate] = useState(false)
   const [showReport, setShowReport] = useState(null)
-  const [form, setForm] = useState({ studentId: '', classId: '', quarter: 'Q1', academicYear: '2024-2025', teacherRemarks: '' })
+  const [form, setForm] = useState({ studentId: '', classId: '', termName: '', academicYear: '2024-2025', teacherRemarks: '' })
   const [errors, setErrors] = useState({})
   const currentYear = '2024-2025'
+
+
 
   const { data: reports, isLoading } = useQuery({
     queryKey: ['academic-reports', classFilter, currentYear],
@@ -30,6 +31,9 @@ export default function TeacherAcademicReports() {
     queryKey: ['classes'],
     queryFn: () => classesAPI.getAll({ academicYear: currentYear }),
   })
+
+  const selectedClass = (Array.isArray(classes) ? classes : classes?.classes || []).find(c => c._id === form.classId)
+  const availableTerms = selectedClass?.academicStructure?.terms || []
 
   const { data: students } = useQuery({
     queryKey: ['students', form.classId],
@@ -44,7 +48,7 @@ export default function TeacherAcademicReports() {
       qc.invalidateQueries({ queryKey: ['academic-reports'] })
       setShowGenerate(false)
       setErrors({})
-      setForm({ studentId: '', classId: '', quarter: 'Q1', academicYear: '2024-2025', teacherRemarks: '' })
+      setForm({ studentId: '', classId: '', termName: '', academicYear: '2024-2025', teacherRemarks: '' })
     },
   })
 
@@ -52,7 +56,7 @@ export default function TeacherAcademicReports() {
     const errs = {}
     if (!data.classId) errs.classId = 'Class is required.'
     if (!data.studentId) errs.studentId = 'Student is required.'
-    if (!data.quarter) errs.quarter = 'Quarter is required.'
+    if (!data.termName) errs.termName = 'Term is required.'
     return errs
   }
 
@@ -75,9 +79,9 @@ export default function TeacherAcademicReports() {
             {classFilter && (
               <button
                 onClick={() => {
-                  const q = prompt('Generate for which quarter? (Q1/Q2/Q3/Q4)', 'Q1')
-                  if (!q) return
-                  bulkMutation.mutate({ classId: classFilter, quarter: q, academicYear: currentYear })
+                  const t = prompt('Generate for which term?', availableTerms[0]?.name || '')
+                  if (!t) return
+                  bulkMutation.mutate({ classId: classFilter, termName: t, academicYear: currentYear })
                 }}
                 disabled={bulkMutation.isPending}
                 className="btn-secondary disabled:opacity-50"
@@ -116,7 +120,7 @@ export default function TeacherAcademicReports() {
                   <AttendanceRing percentage={r.percentage} size={56} />
                 </div>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-azure-500/10 text-azure-400 border border-azure-500/20 text-xs px-2 py-0.5 rounded-full font-mono">{r.quarter}</span>
+                  <span className="bg-azure-500/10 text-azure-400 border border-azure-500/20 text-xs px-2 py-0.5 rounded-full font-mono">{r.termName || r.quarter}</span>
                   <span className={`bg-${gc}-500/10 text-${gc}-400 border border-${gc}-500/20 text-xs px-2 py-0.5 rounded-full font-bold`}>{r.overallGrade}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-1 mb-3">
@@ -168,17 +172,18 @@ export default function TeacherAcademicReports() {
               </select>
             </Field>
           </div>
-          <Field label="Quarter" required error={errors.quarter}>
-            <div className="flex gap-2">
-              {QUARTERS.map(q => (
-                <button key={q} type="button" onClick={() => { setForm(p => ({ ...p, quarter: q })); setErrors(p => ({ ...p, quarter: undefined })) }}
-                  className={clsx('flex-1 py-2 rounded-lg text-sm border transition-all',
-                    form.quarter === q ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10',
-                    errors.quarter && 'border-rose-500/50'
+          <Field label="Academic Term" required error={errors.termName}>
+            <div className="flex flex-wrap gap-2">
+              {availableTerms.map(t => (
+                <button key={t.name} type="button" onClick={() => { setForm(p => ({ ...p, termName: t.name })); setErrors(p => ({ ...p, termName: undefined })) }}
+                  className={clsx('px-4 py-2 rounded-lg text-sm border transition-all',
+                    form.termName === t.name ? 'bg-azure-600/20 text-azure-400 border-azure-500/30' : 'bg-ink-700 text-slate-400 border-white/10',
+                    errors.termName && 'border-rose-500/50'
                   )}>
-                  {q}
+                  {t.name}
                 </button>
               ))}
+              {availableTerms.length === 0 && <p className="text-xs text-slate-500 italic">No terms defined for this class structure.</p>}
             </div>
           </Field>
           <Field label="Teacher Remarks">
@@ -208,7 +213,7 @@ export default function TeacherAcademicReports() {
               <div className="bg-ink-700 rounded-xl p-4">
                 <p className="text-xs text-slate-500 mb-1">Class & Quarter</p>
                 <p className="text-white font-semibold">{showReport.classId?.name}</p>
-                <p className="text-xs text-azure-400 font-mono mt-0.5">{showReport.quarter} — {showReport.academicYear}</p>
+                <p className="text-xs text-azure-400 font-mono mt-0.5">{showReport.termName || showReport.quarter} — {showReport.academicYear}</p>
               </div>
               <div className="bg-ink-700 rounded-xl p-4 text-center">
                 <AttendanceRing percentage={showReport.percentage} size={72} />
@@ -238,11 +243,11 @@ export default function TeacherAcademicReports() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-3">
-                        {QUARTERS.map(q => (
-                          <div key={q} className={clsx('flex-1 text-center py-2 rounded-lg', s.quarters?.[q] ? 'bg-ink-800' : 'bg-ink-900 opacity-40')}>
-                            <p className="text-xs text-slate-500">{q}</p>
-                            <p className="font-mono font-bold text-white text-sm">{s.quarters?.[q]?.marksObtained ?? '—'}</p>
+                      <div className="flex flex-wrap gap-3">
+                        {Object.keys(s.quarters || {}).map(qKey => (
+                          <div key={qKey} className="flex-1 min-w-[80px] text-center py-2 rounded-lg bg-ink-800">
+                            <p className="text-[10px] text-slate-500 uppercase">{qKey}</p>
+                            <p className="font-mono font-bold text-white text-sm">{s.quarters[qKey]?.marksObtained ?? '—'}</p>
                           </div>
                         ))}
                       </div>

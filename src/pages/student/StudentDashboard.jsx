@@ -49,9 +49,9 @@ export default function StudentDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
         <StatCard icon={Activity} label="Attendance" value={`${summary?.percentage || 0}%`} sub={`${summary?.present || 0} / ${summary?.total || 0} days`} color={summary?.percentage >= 75 ? 'jade' : 'rose'} />
-        <StatCard icon={FileText} label="Reports" value={reports?.length || 0} sub="This academic year" color="azure" />
-        <StatCard icon={BookMarked} label="Sessions" value={sessions?.length || 0} sub="Total sessions" color="amber" />
-        <StatCard icon={Clock} label="Academic Year" value="2024-25" sub="Current year" color="rose" />
+        <StatCard icon={FileText} label="Reports" value={reports?.length || 0} sub="Academic reports" color="azure" />
+        <StatCard icon={BookMarked} label="Sessions" value={sessions?.length || 0} sub="Scheduled sessions" color="amber" />
+        <StatCard icon={Clock} label="Schedule" value="View All" sub="Weekly classes" color="rose" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -90,14 +90,14 @@ export default function StudentDashboard() {
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-title">Latest Report</h2>
-            <Link to="/student/reports" className="text-xs text-azure-400 hover:text-azure-300">All →</Link>
+            <Link to="/student/report-card" className="text-xs text-azure-400 hover:text-azure-300">All →</Link>
           </div>
           {latestReport ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-display font-bold text-white text-lg">{latestReport.quarter}</p>
-                  <p className="text-xs text-slate-500">{latestReport.academicYear}</p>
+                  <p className="text-xs text-slate-500">{latestReport.createdAt ? format(new Date(latestReport.createdAt), 'MMM d, yyyy') : ''}</p>
                 </div>
                 <AttendanceRing percentage={latestReport.attendancePercentage} size={64} />
               </div>

@@ -66,24 +66,12 @@ export default function AdminDashboard() {
           <h1 className="page-title">Admin Dashboard</h1>
           <p className="text-slate-500 text-sm mt-0.5">Welcome back, {user?.firstName}. Here's your system overview.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-ink-800 border border-white/5 rounded-xl px-3 py-1.5">
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Session</span>
-            <select 
-              value={selectedYear} 
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="bg-transparent text-sm text-azure-400 font-medium outline-none cursor-pointer hover:text-azure-300 transition-colors"
-            >
-              {years.map(y => <option key={y} value={y} className="bg-ink-900 border-none">{y}</option>)}
-            </select>
+        {connected && (
+          <div className="flex items-center gap-2 text-xs text-jade-400 bg-jade-500/10 border border-jade-500/20 px-3 py-1.5 rounded-full whitespace-nowrap">
+            <span className="live-dot" />
+            Live
           </div>
-          {connected && (
-            <div className="flex items-center gap-2 text-xs text-jade-400 bg-jade-500/10 border border-jade-500/20 px-3 py-1.5 rounded-full whitespace-nowrap">
-              <span className="live-dot" />
-              Live
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -91,8 +79,8 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
           <StatCard icon={Users} label="Total Students" value={students.length} sub="Active enrollments" color="azure" />
           <StatCard icon={Users} label="Total Teachers" value={teachers.length} sub="Active faculty" color="jade" />
-          <StatCard icon={BookOpen} label="Classes" value={classes?.total ?? classes?.length ?? 0} sub={`AY ${selectedYear}`} color="amber" />
-          <StatCard icon={FileText} label="Reports" value={reports?.length || 0} sub={`AY ${selectedYear}`} color="rose" />
+          <StatCard icon={BookOpen} label="Classes" value={classes?.total ?? classes?.length ?? 0} sub="Active classes" color="amber" />
+          <StatCard icon={FileText} label="Reports" value={reports?.length || 0} sub="Academic reports" color="rose" />
         </div>
       )}
 
@@ -120,7 +108,6 @@ export default function AdminDashboard() {
         <div className="card p-5">
           <div className="flex items-center justify-between mb-5">
             <h2 className="section-title">Reports by Quarter</h2>
-            <span className="text-xs text-slate-500">AY {selectedYear}</span>
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={reportsByQuarter}>

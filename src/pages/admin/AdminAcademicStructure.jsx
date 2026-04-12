@@ -18,7 +18,14 @@ export default function AdminAcademicStructure() {
   })
 
   const mutation = useMutation({
-    mutationFn: (data) => data._id ? academicStructureAPI.update(data._id, data) : academicStructureAPI.create(data),
+    mutationFn: (data) => {
+      if (data._id) {
+        // Strip non-whitelisted fields for update
+        const { _id, __v, createdAt, updatedAt, isActive, ...updateData } = data;
+        return academicStructureAPI.update(_id, updateData);
+      }
+      return academicStructureAPI.create(data);
+    },
     onSuccess: () => {
       toast.success(editing ? 'Structure updated' : 'Structure created')
       qc.invalidateQueries({ queryKey: ['academic-structures'] })

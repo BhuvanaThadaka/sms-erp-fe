@@ -79,7 +79,7 @@ export default function AdminClasses() {
     <div className="space-y-5">
       <SectionHeader
         title="Classes"
-        subtitle={`${total || 0} classes this academic year`}
+        subtitle={`${total || 0} classes active`}
         action={
           <button onClick={() => setShowCreate(true)} className="btn-primary">
             <Plus className="w-4 h-4" /> New Class
@@ -99,7 +99,6 @@ export default function AdminClasses() {
                   <td className="table-td text-xs text-slate-400">{(page - 1) * limit + idx + 1}</td>
                   <td className="table-td">
                     <p className="text-white font-medium">{cls.name}</p>
-                    <p className="text-xs text-slate-500 font-mono">{cls.academicYear}</p>
                   </td>
                   <td className="table-td text-slate-400">{cls.room || '—'}</td>
                   <td className="table-td">

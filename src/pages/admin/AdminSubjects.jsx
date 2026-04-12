@@ -230,6 +230,7 @@ export default function AdminSubjects() {
               description: editSubject.description,
               classId: editSubject.classId?._id || editSubject.classId,
               subjectTeacher: editSubject.subjectTeacher?._id || editSubject.subjectTeacher,
+              academicYear: editSubject.academicYear || currentYear,
               maxMarks: editSubject.maxMarks,
               passingMarks: editSubject.passingMarks,
             }})

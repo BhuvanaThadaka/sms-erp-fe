@@ -202,4 +202,9 @@ export const notificationsAPI = {
   delete: (id) => api.delete(`/notifications/${id}`),
 }
 
+// ─── Dashboard ──────────────────────────────────────────
+export const dashboardAPI = {
+  getAdminStats: (params) => api.get('/dashboard/admin-stats', { params }),
+}
+
 export default api

@@ -62,15 +62,36 @@ export default function RegistrationPage() {
 
   const validate = () => {
     const newErrors = {}
-    if (!form.firstName) newErrors.firstName = 'Required'
-    if (!form.lastName) newErrors.lastName = 'Required'
-    if (!form.email) newErrors.email = 'Required'
-    else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Invalid email'
     
-    if (!form.password) newErrors.password = 'Required'
-    else if (form.password.length < 8) newErrors.password = 'Min 8 characters'
+    // First Name
+    if (!form.firstName?.trim()) newErrors.firstName = 'First name is required'
+    else if (form.firstName.length < 2) newErrors.firstName = 'Min 2 characters'
+    else if (!/^[A-Za-z\s]+$/.test(form.firstName)) newErrors.firstName = 'Only letters allowed'
+
+    // Last Name
+    if (!form.lastName?.trim()) newErrors.lastName = 'Last name is required'
+    else if (form.lastName.length < 2) newErrors.lastName = 'Min 2 characters'
+    else if (!/^[A-Za-z\s]+$/.test(form.lastName)) newErrors.lastName = 'Only letters allowed'
+
+    // Email
+    if (!form.email?.trim()) newErrors.email = 'Email address is required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Enter a valid email address'
     
-    if (form.password !== form.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
+    // Phone (Required, exactly 10 digits)
+    if (!form.phone?.trim()) {
+      newErrors.phone = 'Phone number is required'
+    } else if (!/^\d{10}$/.test(form.phone)) {
+      newErrors.phone = 'Must be exactly 10 digits'
+    }
+    
+    // Password
+    if (!form.password) newErrors.password = 'Password is required'
+    else if (form.password.length < 8) newErrors.password = 'Minimum 8 characters'
+    else if (!/(?=.*[A-Za-z])(?=.*\d)/.test(form.password)) newErrors.password = 'Must include letter & number'
+    
+    // Confirm Password
+    if (!form.confirmPassword) newErrors.confirmPassword = 'Please confirm password'
+    else if (form.password !== form.confirmPassword) newErrors.confirmPassword = 'Passwords do not match'
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -78,17 +99,20 @@ export default function RegistrationPage() {
 
   const handleRegister = async (e) => {
     e.preventDefault()
-    if (!validate()) return
+    if (!validate()) {
+      toast.error('Please correct the errors in the form')
+      return
+    }
     
     setLoading(true)
     try {
       const payload = {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        email: form.email,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
         password: form.password,
         role,
-        phone: form.phone,
+        phone: form.phone.trim(),
       }
       
       await authAPI.register(payload)
@@ -99,6 +123,14 @@ export default function RegistrationPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePhoneChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 10)
+    setForm(p => ({ ...p, phone: val }))
+    if (errors.phone) setErrors(p => {
+      const n = { ...p }; delete n.phone; return n
+    })
   }
 
   const fieldProps = { form, setForm, errors, setErrors, showPass, setShowPass }
